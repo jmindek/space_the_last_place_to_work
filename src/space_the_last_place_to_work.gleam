@@ -1,25 +1,43 @@
 import gleam/io
 import gleam/string
+import universe
 
 // I was returning a Result<String, String> but it was not working. I just need a string.
 @external(erlang, "io", "get_line")
 pub fn get_line(prompt: String) -> String
 
-pub fn main() {
-  io.println("Starting Space The Last Place To Work!\n")
-  let cap = get_line("Enter a key. Q to quit.\n")
-  case string.trim(cap) {
-    "q" -> io.println("Quiting\n")
-    _ -> turn()
+@external(erlang, "init", "stop")
+pub fn stop() -> a
+
+fn with_quit_prompt(prompt: String, on_continue: fn() -> a) -> a {
+  case string.trim(get_line(prompt)) {
+    "q" -> {
+      io.println("Quitting\n")
+      // Use exit_with to properly type the exit with a value
+      // This will never actually return, satisfying the type system
+      // The Never type is used to indicate this branch never returns
+      stop()
+    }
+    _ -> on_continue()
   }
 }
 
-pub fn turn() {
-  io.println("Game continues\n")
+pub fn main() {
+  io.println("Starting Space The Last Place To Work!\n")
+  with_quit_prompt("Enter a key. Q to quit.\n", setup)
+}
+
+pub fn setup() {
+  let universe = universe.create_universe(100, 10)
+  io.println("Universe created\n")
+  turn(universe)
+}
+
+pub fn turn(universe: universe) {
   player()
   npc()
   environment()
-  main()
+  with_quit_prompt("Enter a key. Q to quit.\n", fn() { turn(universe) })
 }
 
 pub fn player() {
