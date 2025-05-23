@@ -1,4 +1,5 @@
 import gleam/int
+import gleam/string
 
 // Define the ship class type
 pub type ShipClass {
@@ -232,4 +233,64 @@ pub fn repair_weapons(ship: Ship, amount: Int) -> Ship {
   let Ship(weapons: current, max_weapons: max, ..) = ship
   let new_weapons = int.min(max, current + amount)
   Ship(..ship, weapons: new_weapons)
+}
+
+// Convert a Ship to a string representation
+pub fn to_string(ship: Ship) -> String {
+  let Ship(
+    location: #(x, y),
+    speed: speed,
+    class: class,
+    crew_size: crew_size,
+    fuel_units: fuel_units,
+    max_fuel_units: max_fuel_units,
+    shields: shields,
+    max_shields: max_shields,
+    weapons: weapons,
+    max_weapons: max_weapons,
+  ) = ship
+
+  let class_str = case class {
+    Shuttle -> "Shuttle"
+    Fighter -> "Fighter"
+    Freighter -> "Freighter"
+    Luxury -> "Luxury"
+    Research -> "Research"
+    Classified -> "Classified"
+    Sling -> "Sling"
+    Sail -> "Sail"
+    Rescue -> "Rescue"
+    Miner -> "Miner"
+  }
+
+  string.concat([
+    "Class: ",
+    class_str,
+    "\n",
+    "Location: (",
+    int.to_string(x),
+    ", ",
+    int.to_string(y),
+    ")\n",
+    "Speed: ",
+    int.to_string(speed),
+    "/10\n",
+    "Crew: ",
+    int.to_string(crew_size),
+    "\n",
+    "Fuel: ",
+    int.to_string(fuel_units),
+    "/",
+    int.to_string(max_fuel_units),
+    "\n",
+    "Shields: ",
+    int.to_string(shields),
+    "/",
+    int.to_string(max_shields),
+    "\n",
+    "Weapons: ",
+    int.to_string(weapons),
+    "/",
+    int.to_string(max_weapons),
+  ])
 }
