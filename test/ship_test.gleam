@@ -1,33 +1,34 @@
 import gleeunit/should
 import ship
+
 pub fn new_ship_test() {
   // Test Shuttle
   test_ship_initialization(ship.Shuttle, 4, 0, 2, 10_000)
-  
+
   // Test Fighter
   test_ship_initialization(ship.Fighter, 1, 2, 4, 5000)
-  
+
   // Test Freighter
   test_ship_initialization(ship.Freighter, 2, 0, 2, 15_000)
-  
+
   // Test Luxury
   test_ship_initialization(ship.Luxury, 8, 0, 2, 20_000)
-  
+
   // Test Research
   test_ship_initialization(ship.Research, 10, 0, 0, 20_000)
-  
+
   // Test Classified
   test_ship_initialization(ship.Classified, 1, 0, 0, 0)
-  
+
   // Test Sling
   test_ship_initialization(ship.Sling, 1, 0, 0, 1000)
-  
+
   // Test Sail
   test_ship_initialization(ship.Sail, 1, 0, 0, 1000)
-  
+
   // Test Rescue
   test_ship_initialization(ship.Rescue, 4, 4, 0, 5000)
-  
+
   // Test Miner
   test_ship_initialization(ship.Miner, 8, 4, 0, 15_000)
 }
@@ -41,36 +42,36 @@ fn test_ship_initialization(
   expected_fuel: Int,
 ) -> Nil {
   let ship = ship.new_ship(class, #(0, 0))
-  
+
   ship.crew_size
-    |> should.equal(expected_crew)
-  
+  |> should.equal(expected_crew)
+
   ship.shields
-    |> should.equal(expected_shields)
-  
+  |> should.equal(expected_shields)
+
   ship.max_shields
-    |> should.equal(expected_shields)
-  
+  |> should.equal(expected_shields)
+
   ship.weapons
-    |> should.equal(expected_weapons)
-  
+  |> should.equal(expected_weapons)
+
   ship.max_weapons
-    |> should.equal(expected_weapons)
-  
+  |> should.equal(expected_weapons)
+
   ship.fuel_units
-    |> should.equal(expected_fuel)
-  
+  |> should.equal(expected_fuel)
+
   ship.max_fuel_units
-    |> should.equal(expected_fuel)
-  
+  |> should.equal(expected_fuel)
+
   ship.speed
-    |> should.equal(0)
-  
+  |> should.equal(0)
+
   ship.class
-    |> should.equal(class)
-  
+  |> should.equal(class)
+
   ship.location
-    |> should.equal(#(0, 0))
+  |> should.equal(#(0, 0))
 }
 
 // Helper function to create a test ship with specific stats
@@ -403,7 +404,8 @@ pub fn consume_fuel_test() {
   case ship.consume_fuel(test_ship, -10) {
     Ok(consumed) ->
       consumed.fuel_units
-      |> should.equal(900)  // 1000 - (10 * 10) = 900
+      |> should.equal(900)
+    // 1000 - (10 * 10) = 900
     Error(_) -> {
       Nil
     }
