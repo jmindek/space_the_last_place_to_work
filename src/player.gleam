@@ -35,17 +35,15 @@ fn new_ship(class: ship.ShipClass) -> ship.Ship {
   ship.Ship(
     location: #(0, 0),
     speed: 1,
+    max_speed: 10,
     class: class,
-    crew_size: 4,
-    // Default crew size
+    crew_size: 4,  // Default crew size
     fuel_units: 100,
     max_fuel_units: 100,
     shields: 0,
-    max_shields: 10,
-    // Default max shields
+    max_shields: 10,  // Default max shields
     weapons: 0,
-    max_weapons: 5,
-    // Default max weapons
+    max_weapons: 5,  // Default max weapons
   )
 }
 
@@ -104,6 +102,12 @@ pub fn move_ship(
 
   let updated_ship = ship.Ship(..player.ship, location: #(wrapped_x, wrapped_y))
   Ok(Player(..player, ship: updated_ship))
+}
+
+// Update the player's ship speed
+pub fn set_ship_speed(player: Player, speed: Int) -> Player {
+  let updated_ship = ship.set_speed(player.ship, speed)
+  Player(..player, ship: updated_ship)
 }
 
 // Format player information as a string

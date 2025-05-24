@@ -20,6 +20,7 @@ pub type Ship {
   Ship(
     location: #(Int, Int),
     speed: Int,
+    max_speed: Int,
     class: ShipClass,
     crew_size: Int,
     fuel_units: Int,
@@ -108,6 +109,8 @@ pub fn new_ship(class: ShipClass, location: #(Int, Int)) -> Ship {
     location: location,
     speed: 0,
     // Start at 0 speed
+    max_speed: 10,
+    // Max speed is 10 for all ship types
     class: class,
     crew_size: crew_size,
     fuel_units: max_fuel,
@@ -240,6 +243,7 @@ pub fn to_string(ship: Ship) -> String {
   let Ship(
     location: #(x, y),
     speed: speed,
+    max_speed: _max_speed,
     class: class,
     crew_size: crew_size,
     fuel_units: fuel_units,

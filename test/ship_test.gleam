@@ -84,6 +84,7 @@ fn create_test_ship(
   ship.Ship(
     location: #(0, 0),
     speed: 0,
+    max_speed: 10,
     class: ship.Fighter,
     crew_size: 10,
     fuel_units: 5000,
