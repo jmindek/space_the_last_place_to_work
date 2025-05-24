@@ -37,13 +37,16 @@ fn new_ship(class: ship.ShipClass) -> ship.Ship {
     speed: 1,
     max_speed: 10,
     class: class,
-    crew_size: 4,  // Default crew size
+    crew_size: 4,
+    // Default crew size
     fuel_units: 100,
     max_fuel_units: 100,
     shields: 0,
-    max_shields: 10,  // Default max shields
+    max_shields: 10,
+    // Default max shields
     weapons: 0,
-    max_weapons: 5,  // Default max weapons
+    max_weapons: 5,
+    // Default max weapons
   )
 }
 
