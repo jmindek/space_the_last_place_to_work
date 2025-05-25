@@ -4,6 +4,7 @@ import gleam/list
 import gleam/string
 import player
 import ship
+import title_screen
 import universe
 
 // Game state type to represent the game's state
@@ -31,10 +32,15 @@ fn with_quit_prompt(
 }
 
 pub fn main() {
-  io.println("Space The Last Place To Work!\n")
+  title_screen.display_title_screen_clean()
 
   // Main game loop
-  case with_quit_prompt("Enter any key to play. Q to quit.\n", setup) {
+  case
+    with_quit_prompt(
+      "\n                    Enter any key to play. Q to quit.\n",
+      setup,
+    )
+  {
     Ok(Continue(player, universe)) -> game_loop(player, universe)
     Ok(Quit) -> io.println("Goodbye!")
     Error(e) -> io.println("Error: " <> e)
