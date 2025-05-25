@@ -1,5 +1,4 @@
 import gleam/int
-import gleam/string
 
 // Define the ship class type
 pub type ShipClass {
@@ -29,6 +28,10 @@ pub type Ship {
     max_shields: Int,
     weapons: Int,
     max_weapons: Int,
+    cargo_holds: Int,
+    max_cargo_holds: Int,
+    passenger_holds: Int,
+    max_passenger_holds: Int,
   )
 }
 
@@ -98,12 +101,46 @@ fn get_max_fuel_units(class: ShipClass) -> Int {
   }
 }
 
+// Get the max cargo holds for a ship class
+pub fn get_max_cargo_holds(class: ShipClass) -> Int {
+  case class {
+    Shuttle -> 500
+    Fighter -> 0
+    Freighter -> 1000
+    Luxury -> 100
+    Research -> 20
+    Classified -> 0
+    Sling -> 0
+    Sail -> 0
+    Rescue -> 0
+    Miner -> 750
+  }
+}
+
+// Get the max passenger holds for a ship class
+pub fn get_max_passenger_holds(class: ShipClass) -> Int {
+  case class {
+    Shuttle -> 1000
+    Fighter -> 0
+    Freighter -> 8
+    Luxury -> 50
+    Research -> 10
+    Classified -> 0
+    Sling -> 0
+    Sail -> 0
+    Rescue -> 4
+    Miner -> 8
+  }
+}
+
 // Create a new ship with the given class and location
 pub fn new_ship(class: ShipClass, location: #(Int, Int)) -> Ship {
   let crew_size = get_crew_size(class)
   let max_fuel = get_max_fuel_units(class)
   let max_shields = get_max_shields(class)
   let max_weapons = get_max_weapons(class)
+  let max_cargo = get_max_cargo_holds(class)
+  let max_passengers = get_max_passenger_holds(class)
 
   Ship(
     location: location,
@@ -122,6 +159,12 @@ pub fn new_ship(class: ShipClass, location: #(Int, Int)) -> Ship {
     weapons: max_weapons,
     // Start with all weapons operational
     max_weapons: max_weapons,
+    cargo_holds: 0,
+    // Start with empty cargo holds
+    max_cargo_holds: max_cargo,
+    passenger_holds: 0,
+    // Start with no passengers
+    max_passenger_holds: max_passengers,
   )
 }
 
@@ -243,7 +286,7 @@ pub fn to_string(ship: Ship) -> String {
   let Ship(
     location: #(x, y),
     speed: speed,
-    max_speed: _max_speed,
+    max_speed: max_speed,
     class: class,
     crew_size: crew_size,
     fuel_units: fuel_units,
@@ -252,49 +295,64 @@ pub fn to_string(ship: Ship) -> String {
     max_shields: max_shields,
     weapons: weapons,
     max_weapons: max_weapons,
+    cargo_holds: cargo_holds,
+    max_cargo_holds: max_cargo_holds,
+    passenger_holds: passenger_holds,
+    max_passenger_holds: max_passenger_holds,
   ) = ship
 
   let class_str = case class {
     Shuttle -> "Shuttle"
     Fighter -> "Fighter"
     Freighter -> "Freighter"
-    Luxury -> "Luxury"
-    Research -> "Research"
+    Luxury -> "Luxury Yacht"
+    Research -> "Research Vessel"
     Classified -> "Classified"
     Sling -> "Sling"
     Sail -> "Sail"
-    Rescue -> "Rescue"
-    Miner -> "Miner"
+    Rescue -> "Rescue Ship"
+    Miner -> "Mining Vessel"
   }
 
-  string.concat([
-    "Class: ",
-    class_str,
-    "\n",
-    "Location: (",
-    int.to_string(x),
-    ", ",
-    int.to_string(y),
-    ")\n",
-    "Speed: ",
-    int.to_string(speed),
-    "/10\n",
-    "Crew: ",
-    int.to_string(crew_size),
-    "\n",
-    "Fuel: ",
-    int.to_string(fuel_units),
-    "/",
-    int.to_string(max_fuel_units),
-    "\n",
-    "Shields: ",
-    int.to_string(shields),
-    "/",
-    int.to_string(max_shields),
-    "\n",
-    "Weapons: ",
-    int.to_string(weapons),
-    "/",
-    int.to_string(max_weapons),
-  ])
+  "Class: "
+  <> class_str
+  <> "\n"
+  <> "Location: ("
+  <> int.to_string(x)
+  <> ", "
+  <> int.to_string(y)
+  <> ")\n"
+  <> "Speed: "
+  <> int.to_string(speed)
+  <> "/"
+  <> int.to_string(max_speed)
+  <> "\n"
+  <> "Crew: "
+  <> int.to_string(crew_size)
+  <> "\n"
+  <> "Fuel: "
+  <> int.to_string(fuel_units)
+  <> "/"
+  <> int.to_string(max_fuel_units)
+  <> "\n"
+  <> "Shields: "
+  <> int.to_string(shields)
+  <> "/"
+  <> int.to_string(max_shields)
+  <> "\n"
+  <> "Weapons: "
+  <> int.to_string(weapons)
+  <> "/"
+  <> int.to_string(max_weapons)
+  <> "\n"
+  <> "Cargo: "
+  <> int.to_string(cargo_holds)
+  <> "/"
+  <> int.to_string(max_cargo_holds)
+  <> " units\n"
+  <> "Passengers: "
+  <> int.to_string(passenger_holds)
+  <> "/"
+  <> int.to_string(max_passenger_holds)
+  <> " people"
 }

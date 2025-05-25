@@ -32,6 +32,9 @@ fn validate_name(name: String) -> Result(String, String) {
 
 // Helper function to create a new ship with default values
 fn new_ship(class: ship.ShipClass) -> ship.Ship {
+  let max_cargo = ship.get_max_cargo_holds(class)
+  let max_passengers = ship.get_max_passenger_holds(class)
+
   ship.Ship(
     location: #(0, 0),
     speed: 1,
@@ -47,6 +50,12 @@ fn new_ship(class: ship.ShipClass) -> ship.Ship {
     weapons: 0,
     max_weapons: 5,
     // Default max weapons
+    cargo_holds: 0,
+    // Start with empty cargo
+    max_cargo_holds: max_cargo,
+    passenger_holds: 0,
+    // Start with no passengers
+    max_passenger_holds: max_passengers,
   )
 }
 

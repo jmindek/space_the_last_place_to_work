@@ -1,58 +1,93 @@
 import gleam/int
 import gleam/io
+import gleam/list
 import gleam/string
 import player
 import ship
+import title_screen
 import universe
+
+// Game state type to represent the game's state
+pub type GameState {
+  Continue(player: player.Player, universe: universe.Universe)
+  Quit
+}
 
 // I was returning a Result<String, String> but it was not working. I just need a string.
 @external(erlang, "io", "get_line")
 pub fn get_line(prompt: String) -> String
 
-@external(erlang, "init", "stop")
-pub fn stop() -> a
-
-fn with_quit_prompt(prompt: String, on_continue: fn() -> a) -> a {
-  case string.trim(get_line(prompt)) {
+fn with_quit_prompt(
+  prompt: String,
+  on_continue: fn() -> Result(GameState, String),
+) -> Result(GameState, String) {
+  let input = string.trim(get_line(prompt))
+  case string.lowercase(input) {
     "q" -> {
       io.println("Quitting\n")
-      stop()
+      Ok(Quit)
     }
     _ -> on_continue()
   }
 }
 
 pub fn main() {
-  io.println("Starting Space The Last Place To Work!\n")
-  with_quit_prompt("Enter a key. Q to quit.\n", setup)
+  title_screen.display_title_screen_clean()
+
+  // Main game loop
+  case
+    with_quit_prompt(
+      "\n                    Enter any key to play. Q to quit.\n",
+      setup,
+    )
+  {
+    Ok(Continue(player, universe)) -> game_loop(player, universe)
+    Ok(Quit) -> io.println("Goodbye!")
+    Error(e) -> io.println("Error: " <> e)
+  }
 }
 
-pub fn setup() {
-  let universe = universe.create_universe(100, 10)
+fn setup() -> Result(GameState, String) {
+  let universe = universe.create_universe(100, 40)
   let ship = ship.new_ship(ship.Shuttle, #(0, 0))
   case player.new("Player", ship.class) {
     Ok(player) -> {
       io.println("Player created\n")
-      turn(universe, player)
+      Ok(Continue(player, universe))
     }
     Error(e) -> {
-      io.println("Failed to create player: " <> e)
-      stop()
+      Error("Failed to create player: " <> e)
     }
   }
 }
 
-pub fn turn(universe: universe.Universe, player: player.Player) {
-  let updated_player = player_turn(universe, player)
-  npc_turn(universe, updated_player)
-  environment_turn(universe, updated_player)
-  turn(universe, updated_player)
+fn game_loop(player: player.Player, universe: universe.Universe) -> Nil {
+  case player_turn(universe, player) {
+    Continue(updated_player, updated_universe) -> {
+      // Continue with NPC and environment turns
+      let next_player = npc_turn(updated_universe, updated_player)
+      let next_player = environment_turn(updated_universe, next_player)
+      game_loop(next_player, updated_universe)
+    }
+    Quit -> {
+      io.println("Returning to main menu...\n")
+      main()
+    }
+  }
 }
 
-pub fn player_turn(
-  universe: universe.Universe,
-  player: player.Player,
-) -> player.Player {
+pub fn turn(universe: universe.Universe, player: player.Player) -> GameState {
+  case player_turn(universe, player) {
+    Continue(updated_player, updated_universe) -> {
+      let next_player = npc_turn(updated_universe, updated_player)
+      let next_player = environment_turn(updated_universe, next_player)
+      Continue(next_player, updated_universe)
+    }
+    Quit -> Quit
+  }
+}
+
+fn player_turn(universe: universe.Universe, player: player.Player) -> GameState {
   let player.Player(name, ship, _) = player
   let #(x, y) = ship.location
   let current_speed = ship.speed
@@ -78,6 +113,7 @@ pub fn player_turn(
   io.println("  M - Move")
   io.println("  I - Show ship info")
   io.println("  T# - Set speed (1-" <> int.to_string(max_speed) <> ")")
+  io.println("  L - Show location map")
   io.println("  Q - Quit")
   io.print("> ")
 
@@ -86,7 +122,7 @@ pub fn player_turn(
 
   // Handle empty input first
   case command == "" {
-    True -> player
+    True -> Continue(player, universe)
     False -> {
       // Handle commands
       case command {
@@ -97,13 +133,17 @@ pub fn player_turn(
           io.println(ship_info)
           io.println("\nPress Enter to continue...")
           let _ = get_line("")
-          player
+          Continue(player, universe)
+        }
+        // Show location map
+        "L" -> {
+          show_location_map(ship.location, universe)
+          io.println("\nPress Enter to continue...")
+          let _ = get_line("")
+          Continue(player, universe)
         }
         // Quit command
-        "Q" -> {
-          io.println("Quitting\n")
-          stop()
-        }
+        "Q" -> Quit
         // Move command
         "M" -> {
           io.println("Enter target coordinates (X:Y):")
@@ -136,18 +176,18 @@ pub fn player_turn(
                             <> ":"
                             <> int.to_string(y),
                           )
-                          updated_player
+                          Continue(updated_player, universe)
                         }
                         Error(e) -> {
                           io.println("Error: " <> e)
-                          player
+                          Continue(player, universe)
                         }
                       }
                     False -> {
                       case distance == 0 {
                         True -> {
                           io.println("Error: You're already at that location!")
-                          player
+                          Continue(player, universe)
                         }
                         False -> {
                           io.println(
@@ -159,7 +199,7 @@ pub fn player_turn(
                             <> int.to_string(distance)
                             <> " units",
                           )
-                          player
+                          Continue(player, universe)
                         }
                       }
                     }
@@ -167,13 +207,13 @@ pub fn player_turn(
                 }
                 _, _ -> {
                   io.println("Invalid coordinates")
-                  player
+                  Continue(player, universe)
                 }
               }
             }
             _ -> {
               io.println("Invalid input format. Please use X:Y")
-              player
+              Continue(player, universe)
             }
           }
         }
@@ -193,19 +233,19 @@ pub fn player_turn(
                     <> "/"
                     <> int.to_string(max_speed),
                   )
-                  updated_player
+                  Continue(updated_player, universe)
                 }
                 Error(_) -> {
                   io.println(
                     "Invalid speed command. Use T# where # is a number.",
                   )
-                  player
+                  Continue(player, universe)
                 }
               }
             }
             _ -> {
-              io.println("Unknown command")
-              player
+              io.println("Unknown command: " <> command)
+              Continue(player, universe)
             }
           }
         }
@@ -214,13 +254,88 @@ pub fn player_turn(
   }
 }
 
-pub fn npc_turn(_universe: universe.Universe, player: player.Player) {
-  io.println("NPC's turn\n")
-  player
-  // Return the player unchanged
+// Display a 5x10 map showing the player's location and nearby objects
+fn show_location_map(
+  player_pos: #(Int, Int),
+  universe: universe.Universe,
+) -> Nil {
+  let #(player_x, player_y) = player_pos
+
+  // Calculate the visible area (10x5 grid centered on player)
+  let start_x = player_x - 4
+  // Show 4 columns to the left
+  let end_x = player_x + 5
+  // and 5 columns to the right (10 total)
+  let start_y = player_y - 2
+  // Show 2 rows above
+  let end_y = player_y + 2
+  // and 2 rows below (5 total)
+
+  // Print header
+  io.println("\n      " <> string.repeat("-", 19))
+  io.println("     |0 1 2 3 4 5 6 7 8 9|")
+  io.println("     +------------------+")
+
+  // Print each row
+  list.each(list.range(start_y, end_y), fn(y) {
+    // Print row number with padding for alignment
+    let y_str = int.to_string(y)
+    let padding = case string.length(y_str) {
+      1 -> "  "
+      // Two spaces for single-digit numbers
+      2 -> " "
+      // One space for two-digit numbers
+      _ -> ""
+      // No space for three-digit numbers
+    }
+    io.print(padding <> y_str <> " |")
+
+    // Print each column in the row
+    list.each(list.range(start_x, end_x), fn(x) {
+      // Check if this is the player's position
+      case x == player_x && y == player_y {
+        True -> io.print("* ")
+        False -> {
+          // Check if there's a planet at this position
+          let has_planet =
+            list.any(universe.planets, fn(planet) {
+              planet.position.x == x && planet.position.y == y
+            })
+
+          // Print the appropriate symbol
+          case has_planet {
+            True -> io.print("0 ")
+            False -> io.print(". ")
+          }
+        }
+      }
+    })
+
+    // End of row
+    io.println("|")
+  })
+
+  // Print footer and legend
+  io.println("     +------------------+")
+  io.println("     * = Your ship")
+  io.println("     0 = Planet")
+  io.println("     . = Empty space")
 }
 
-pub fn environment_turn(_universe: universe.Universe, player: player.Player) {
+pub fn npc_turn(
+  _universe: universe.Universe,
+  player: player.Player,
+) -> player.Player {
+  io.println("NPC's turn\n")
+  // NPC turn logic will go here
+  player
+}
+
+pub fn environment_turn(
+  _universe: universe.Universe,
+  player: player.Player,
+) -> player.Player {
+  io.println("Environment's turn\n")
   // Environment turn logic will go here
   player
 }

@@ -81,14 +81,22 @@ fn create_test_ship(
   weapons: Int,
   max_weapons: Int,
 ) -> ship.Ship {
+  let class = ship.Fighter
+  let max_cargo = ship.get_max_cargo_holds(class)
+  let max_passengers = ship.get_max_passenger_holds(class)
+
   ship.Ship(
     location: #(0, 0),
     speed: 0,
     max_speed: 10,
-    class: ship.Fighter,
+    class: class,
     crew_size: 10,
     fuel_units: 5000,
     max_fuel_units: 5000,
+    cargo_holds: 0,
+    max_cargo_holds: max_cargo,
+    passenger_holds: 0,
+    max_passenger_holds: max_passengers,
     shields: shields,
     max_shields: max_shields,
     weapons: weapons,
