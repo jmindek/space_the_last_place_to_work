@@ -34,22 +34,27 @@ fn validate_name(name: String) -> Result(String, String) {
 fn new_ship(class: ship.ShipClass) -> ship.Ship {
   let max_cargo = ship.get_max_cargo_holds(class)
   let max_passengers = ship.get_max_passenger_holds(class)
-  
+
   ship.Ship(
     location: #(0, 0),
     speed: 1,
     max_speed: 10,
     class: class,
-    crew_size: 4,  // Default crew size
+    crew_size: 4,
+    // Default crew size
     fuel_units: 100,
     max_fuel_units: 100,
     shields: 0,
-    max_shields: 10,  // Default max shields
+    max_shields: 10,
+    // Default max shields
     weapons: 0,
-    max_weapons: 5,  // Default max weapons
-    cargo_holds: 0,  // Start with empty cargo
+    max_weapons: 5,
+    // Default max weapons
+    cargo_holds: 0,
+    // Start with empty cargo
     max_cargo_holds: max_cargo,
-    passenger_holds: 0,  // Start with no passengers
+    passenger_holds: 0,
+    // Start with no passengers
     max_passenger_holds: max_passengers,
   )
 }

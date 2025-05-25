@@ -84,7 +84,7 @@ fn create_test_ship(
   let class = ship.Fighter
   let max_cargo = ship.get_max_cargo_holds(class)
   let max_passengers = ship.get_max_passenger_holds(class)
-  
+
   ship.Ship(
     location: #(0, 0),
     speed: 0,
