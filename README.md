@@ -1,4 +1,18 @@
-# space_the_last_place_to_work
+<pre style="background-color: black; color: white; padding: 20px; font-family: monospace;">
+    <span style="color: #ffff00;">*</span>                                           <span style="color: #ffffff;">.</span>                   <span style="color: #ff00ff;">*</span>
+<span style="color: #00ffff;">.</span>                      <span style="color: #ffff00;">.</span>                                           <span style="color: #ffffff;">*</span>
+            <span style="color: #ff00ff;">*</span>                                                             <span style="color: #00ffff;">*</span>
+                <span style="color: #0000ff; font-weight: bold;">████████ ██████   ██████   ██████  ███████</span>
+<span style="color: #ffffff;">.</span>               <span style="color: #0000ff; font-weight: bold;">██       ██   ██ ██   ██ ██       ██     </span>      <span style="color: #ffff00;">*</span>
+                <span style="color: #0000ff; font-weight: bold;">███████  ██████  ██████  ██       █████  </span>
+     <span style="color: #00ffff;">*</span>           <span style="color: #0000ff; font-weight: bold;">     ██ ██      ██   ██ ██       ██     </span>
+                <span style="color: #0000ff; font-weight: bold;">███████  ██      ██   ██  ██████  ███████</span>         <span style="color: #ff00ff;">.</span>
+  <span style="color: #ffff00;">.</span>                                                               <span style="color: #ffffff;">*</span>
+
+                         <span style="color: #00ffff; font-weight: bold;">The Last Place To Work</span>
+
+           <span style="color: #ff00ff;">*</span>                                     <span style="color: #00ffff;">.</span>              <span style="color: #ffff00;">*</span>
+</pre>
 
 Space, it's the last place to work. Can you make a living? 
 Maybe. 
