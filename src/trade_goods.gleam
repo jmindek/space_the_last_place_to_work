@@ -32,8 +32,8 @@ pub fn generate_trade_goods() -> List(TradeGoods) {
     // Habitat: 1-500 units, price 500-5000
     Habitat("Habitat", random_price(500, 5000), int.random(500)),
     // Weapons: 1-1,000 units, price 1000-10000
-    Weapons("Weapons", random_price(1000, 10000), int.random(1_000)),
+    Weapons("Weapons", random_price(1000, 10_000), int.random(1000)),
     // Shields: 1-500 units, price 1000-10000
-    Shields("Shields", random_price(1000, 10000), int.random(500))
+    Shields("Shields", random_price(1000, 10_000), int.random(500)),
   ]
 }

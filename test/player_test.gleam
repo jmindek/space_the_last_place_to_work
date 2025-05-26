@@ -1,7 +1,6 @@
 import gleam/io
 import gleam/list
 import gleam/option
-import gleam/string
 import gleeunit/should
 import player
 import ship
@@ -24,7 +23,7 @@ fn create_test_universe() -> universe.Universe {
       has_starport: True,
       has_ftl_lane: True,
       trade_allowed: True,
-      trade_goods: []
+      trade_goods: [],
     ),
     universe.Planet(
       position: universe.Position(5, 5),
@@ -40,7 +39,7 @@ fn create_test_universe() -> universe.Universe {
       has_starport: False,
       has_ftl_lane: False,
       trade_allowed: False,
-      trade_goods: []
+      trade_goods: [],
     ),
     universe.Planet(
       position: universe.Position(3, 3),
@@ -56,8 +55,8 @@ fn create_test_universe() -> universe.Universe {
       has_starport: True,
       has_ftl_lane: True,
       trade_allowed: True,
-      trade_goods: []
-    )
+      trade_goods: [],
+    ),
   ]
   universe.Universe(size: 10, planets: planets)
 }
@@ -149,7 +148,8 @@ pub fn set_homeworld_test() {
                           io.println(
                             "Error: Should not be able to set homeworld to Mars",
                           )
-                        Error(_) -> Nil // Expected error
+                        Error(_) -> Nil
+                        // Expected error
                       }
                     }
                     Error(_) -> io.println("Mars not found in test universe")
@@ -191,13 +191,11 @@ pub fn move_ship_test() {
                   moved3.ship.location
                   |> should.equal(#(7, 5))
 
-
                   // Test wrapping around top and bottom
                   case player.move_ship(player, 5, -3, test_universe) {
                     Ok(moved4) -> {
                       moved4.ship.location
                       |> should.equal(#(5, 7))
-
 
                       case player.move_ship(player, 5, 15, test_universe) {
                         Ok(moved5) -> {
