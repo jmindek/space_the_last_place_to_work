@@ -1,10 +1,12 @@
 import gleam/int
 import gleam/io
 import gleam/list
+import gleam/result
 import gleam/string
 import player
 import ship
 import title_screen
+import trade_goods
 import universe
 
 // Game state type to represent the game's state
@@ -48,16 +50,67 @@ pub fn main() {
 }
 
 fn setup() -> Result(GameState, String) {
-  let universe = universe.create_universe(100, 40)
-  let ship = ship.new_ship(ship.Shuttle, #(0, 0))
-  case player.new("Player", ship.class) {
+  let universe = universe.create_universe(100, 60)
+
+  // Find the first planet to use as homeworld
+  let homeworld = case universe.planets {
+    [first_planet, ..] -> first_planet
+    _ ->
+      // Create a default homeworld if no planets exist
+      universe.Planet(
+        position: universe.Position(x: 50, y: 50),
+        life_supporting: True,
+        population: 1000,
+        water_percentage: 80,
+        oxygen_percentage: 21,
+        gravity: 1.0,
+        industry: universe.Agra,
+        mapping_percentage: 100,
+        name: "Default Homeworld",
+        moons: 1,
+        has_starport: True,
+        has_ftl_lane: True,
+        trade_allowed: True,
+        trade_goods: [],
+      )
+  }
+
+  // Create player
+  case player.new("Player", ship.Shuttle) {
     Ok(player) -> {
-      io.println("Player created\n")
-      Ok(Continue(player, universe))
+      // Set homeworld and position
+      let updated_player =
+        player.set_homeworld(player, homeworld)
+        |> result.unwrap(player)
+      // Fallback to original player if error
+
+      // Move ship to homeworld coordinates
+      let final_player =
+        player.move_ship(
+          updated_player,
+          homeworld.position.x,
+          homeworld.position.y,
+          universe,
+        )
+        |> result.unwrap(updated_player)
+      // Fallback to previous player if error
+
+      // Log starting location
+      let coords =
+        string.concat([
+          "\nStarting at ",
+          homeworld.name,
+          " at coordinates (",
+          int.to_string(homeworld.position.x),
+          ":",
+          int.to_string(homeworld.position.y),
+          ")\n",
+        ])
+      io.println(coords)
+
+      Ok(Continue(final_player, universe))
     }
-    Error(e) -> {
-      Error("Failed to create player: " <> e)
-    }
+    Error(e) -> Error("Failed to create player: " <> e)
   }
 }
 
@@ -66,7 +119,8 @@ fn game_loop(player: player.Player, universe: universe.Universe) -> Nil {
     Continue(updated_player, updated_universe) -> {
       // Continue with NPC and environment turns
       let next_player = npc_turn(updated_universe, updated_player)
-      let next_player = environment_turn(updated_universe, next_player)
+      let #(next_player, updated_universe) =
+        environment_turn(updated_universe, next_player)
       game_loop(next_player, updated_universe)
     }
     Quit -> {
@@ -80,7 +134,8 @@ pub fn turn(universe: universe.Universe, player: player.Player) -> GameState {
   case player_turn(universe, player) {
     Continue(updated_player, updated_universe) -> {
       let next_player = npc_turn(updated_universe, updated_player)
-      let next_player = environment_turn(updated_universe, next_player)
+      let #(next_player, updated_universe) =
+        environment_turn(updated_universe, next_player)
       Continue(next_player, updated_universe)
     }
     Quit -> Quit
@@ -331,11 +386,86 @@ pub fn npc_turn(
   player
 }
 
+// Update the price of a single trade good with some random fluctuation
+fn fluctuate_price(trade_good: trade_goods.TradeGoods) -> trade_goods.TradeGoods {
+  let fluctuation = int.random(21) - 10
+  // Random number between -10 and +10
+
+  case trade_good {
+    trade_goods.Protein(name, price, quantity) -> {
+      let new_price = int.max(1, price + fluctuation)
+      trade_goods.Protein(name, new_price, quantity)
+    }
+    trade_goods.Hydro(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 10, 1000)
+      trade_goods.Hydro(name, new_price, quantity)
+    }
+    trade_goods.Fuel(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 50, 1000)
+      trade_goods.Fuel(name, new_price, quantity)
+    }
+    trade_goods.SpareParts(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 25, 1000)
+      trade_goods.SpareParts(name, new_price, quantity)
+    }
+    trade_goods.Mineral(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 100, 1000)
+      trade_goods.Mineral(name, new_price, quantity)
+    }
+    trade_goods.Habitat(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 500, 5000)
+      trade_goods.Habitat(name, new_price, quantity)
+    }
+    trade_goods.Weapons(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Weapons(name, new_price, quantity)
+    }
+    trade_goods.Shields(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Shields(name, new_price, quantity)
+    }
+  }
+}
+
+// Update all trade goods on a planet with price fluctuations
+fn update_planet_prices(planet: universe.Planet) -> universe.Planet {
+  let updated_goods = list.map(planet.trade_goods, fluctuate_price)
+  universe.Planet(
+    position: planet.position,
+    life_supporting: planet.life_supporting,
+    population: planet.population,
+    water_percentage: planet.water_percentage,
+    oxygen_percentage: planet.oxygen_percentage,
+    gravity: planet.gravity,
+    industry: planet.industry,
+    mapping_percentage: planet.mapping_percentage,
+    name: planet.name,
+    moons: planet.moons,
+    has_starport: planet.has_starport,
+    has_ftl_lane: planet.has_ftl_lane,
+    trade_allowed: planet.trade_allowed,
+    trade_goods: updated_goods,
+  )
+}
+
 pub fn environment_turn(
-  _universe: universe.Universe,
+  universe: universe.Universe,
   player: player.Player,
-) -> player.Player {
-  io.println("Environment's turn\n")
-  // Environment turn logic will go here
-  player
+) -> #(player.Player, universe.Universe) {
+  io.println("Environment's turn - updating trade good prices...")
+
+  // Update prices on all planets
+  let updated_planets = list.map(universe.planets, update_planet_prices)
+  let updated_universe =
+    universe.Universe(size: universe.size, planets: updated_planets)
+
+  // Return both the player and the updated universe
+  #(
+    player.Player(
+      name: player.name,
+      ship: player.ship,
+      homeworld: player.homeworld,
+    ),
+    updated_universe,
+  )
 }

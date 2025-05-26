@@ -3,6 +3,7 @@ import gleam/int
 import gleam/list
 import gleam/result
 import gleam/string
+import trade_goods
 
 pub type IndustryType {
   Agra
@@ -10,8 +11,9 @@ pub type IndustryType {
   Terraforming
   Technology
   Cloning
-  Wasteland
-  Uncharted
+  Shipyard
+  Classified
+  Undefined
 }
 
 pub type Position {
@@ -32,7 +34,20 @@ pub type Planet {
     moons: Int,
     has_starport: Bool,
     has_ftl_lane: Bool,
+    trade_allowed: Bool,
+    trade_goods: List(trade_goods.TradeGoods),
   )
+}
+
+pub type TradeGoods {
+  Protein(name: String, price: Int, quantity: Int)
+  Hydro(name: String, price: Int, quantity: Int)
+  Fuel(name: String, price: Int, quantity: Int)
+  Mineral(name: String, price: Int, quantity: Int)
+  Habitat(name: String, price: Int, quantity: Int)
+  Weapons(name: String, price: Int, quantity: Int)
+  Shields(name: String, price: Int, quantity: Int)
+  SpareParts(name: String, price: Int, quantity: Int)
 }
 
 pub type Universe {
@@ -46,20 +61,21 @@ fn random_industry() -> IndustryType {
     Terraforming,
     Technology,
     Cloning,
-    Wasteland,
-    Uncharted,
+    Shipyard,
+    Classified,
+    Undefined,
   ]
   // Get a random industry using list.drop and pattern matching
   let index =
-    int.remainder(int.random(1000), 7)
-    // 7 industry types
+    int.remainder(int.random(1000), 8)
+    // 8 industry types
     |> result.unwrap(0)
 
   // Use list.drop to get a sublist starting at the random index
   // Then take the first element if it exists, otherwise default to Uncharted
   case list.drop(industries, index) {
     [industry, ..] -> industry
-    _ -> Uncharted
+    _ -> Undefined
   }
 }
 
@@ -115,6 +131,8 @@ pub fn generate_planet(size: Int) -> Planet {
     moons: int.random(9),
     has_starport: random_bool(),
     has_ftl_lane: random_bool(),
+    trade_allowed: random_bool(),
+    trade_goods: trade_goods.generate_trade_goods(),
   )
 }
 
