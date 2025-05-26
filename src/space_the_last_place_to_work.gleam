@@ -5,6 +5,7 @@ import gleam/string
 import player
 import ship
 import title_screen
+import trade_goods
 import universe
 
 // Game state type to represent the game's state
@@ -66,7 +67,7 @@ fn game_loop(player: player.Player, universe: universe.Universe) -> Nil {
     Continue(updated_player, updated_universe) -> {
       // Continue with NPC and environment turns
       let next_player = npc_turn(updated_universe, updated_player)
-      let next_player = environment_turn(updated_universe, next_player)
+      let #(next_player, updated_universe) = environment_turn(updated_universe, next_player)
       game_loop(next_player, updated_universe)
     }
     Quit -> {
@@ -80,7 +81,7 @@ pub fn turn(universe: universe.Universe, player: player.Player) -> GameState {
   case player_turn(universe, player) {
     Continue(updated_player, updated_universe) -> {
       let next_player = npc_turn(updated_universe, updated_player)
-      let next_player = environment_turn(updated_universe, next_player)
+      let #(next_player, updated_universe) = environment_turn(updated_universe, next_player)
       Continue(next_player, updated_universe)
     }
     Quit -> Quit
@@ -331,44 +332,43 @@ pub fn npc_turn(
   player
 }
 
-import gleam/option
-
 // Update the price of a single trade good with some random fluctuation
-fn fluctuate_price(trade_good: universe.TradeStuff) -> universe.TradeStuff {
-  let fluctuation = int.random(21) - 10  // Random number between -10 and +10
-  
+fn fluctuate_price(trade_good: trade_goods.TradeGoods) -> trade_goods.TradeGoods {
+  let fluctuation = int.random(21) - 10
+  // Random number between -10 and +10
+
   case trade_good {
-    universe.Protein(name, price, quantity) -> {
+    trade_goods.Protein(name, price, quantity) -> {
       let new_price = int.max(1, price + fluctuation)
-      universe.Protein(name, new_price, quantity)
+      trade_goods.Protein(name, new_price, quantity)
     }
-    universe.Hydro(name, price, quantity) -> {
+    trade_goods.Hydro(name, price, quantity) -> {
       let new_price = int.clamp(price + fluctuation, 10, 1000)
-      universe.Hydro(name, new_price, quantity)
+      trade_goods.Hydro(name, new_price, quantity)
     }
-    universe.Fuel(name, price, quantity) -> {
+    trade_goods.Fuel(name, price, quantity) -> {
       let new_price = int.clamp(price + fluctuation, 50, 1000)
-      universe.Fuel(name, new_price, quantity)
+      trade_goods.Fuel(name, new_price, quantity)
     }
-    universe.SpareParts(name, price, quantity) -> {
+    trade_goods.SpareParts(name, price, quantity) -> {
       let new_price = int.clamp(price + fluctuation, 25, 1000)
-      universe.SpareParts(name, new_price, quantity)
+      trade_goods.SpareParts(name, new_price, quantity)
     }
-    universe.Mineral(name, price, quantity) -> {
+    trade_goods.Mineral(name, price, quantity) -> {
       let new_price = int.clamp(price + fluctuation, 100, 1000)
-      universe.Mineral(name, new_price, quantity)
+      trade_goods.Mineral(name, new_price, quantity)
     }
-    universe.Habitat(name, price, quantity) -> {
+    trade_goods.Habitat(name, price, quantity) -> {
       let new_price = int.clamp(price + fluctuation, 500, 5000)
-      universe.Habitat(name, new_price, quantity)
+      trade_goods.Habitat(name, new_price, quantity)
     }
-    universe.Weapons(name, price, quantity) -> {
-      let new_price = int.clamp(price + fluctuation, 1000, 10000)
-      universe.Weapons(name, new_price, quantity)
+    trade_goods.Weapons(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Weapons(name, new_price, quantity)
     }
-    universe.Shields(name, price, quantity) -> {
-      let new_price = int.clamp(price + fluctuation, 1000, 10000)
-      universe.Shields(name, new_price, quantity)
+    trade_goods.Shields(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Shields(name, new_price, quantity)
     }
   }
 }
@@ -390,30 +390,28 @@ fn update_planet_prices(planet: universe.Planet) -> universe.Planet {
     has_starport: planet.has_starport,
     has_ftl_lane: planet.has_ftl_lane,
     trade_allowed: planet.trade_allowed,
-    trade_goods: updated_goods
+    trade_goods: updated_goods,
   )
 }
 
 pub fn environment_turn(
   universe: universe.Universe,
   player: player.Player,
-) -> player.Player {
+) -> #(player.Player, universe.Universe) {
   io.println("Environment's turn - updating trade good prices...")
-  
+
   // Update prices on all planets
   let updated_planets = list.map(universe.planets, update_planet_prices)
-  let updated_universe = universe.Universe(
-    size: universe.size,
-    planets: updated_planets
-  )
-  
-  // Return the player with the updated universe
-  // Note: The Player type only has name, ship, and homeworld fields
-  // So we can't store the current planet or inventory in the Player type
-  // You might want to update the Player type if you need to track these
-  player.Player(
-    name: player.name,
-    ship: player.ship,
-    homeworld: player.homeworld
+  let updated_universe =
+    universe.Universe(size: universe.size, planets: updated_planets)
+
+  // Return both the player and the updated universe
+  #(
+    player.Player(
+      name: player.name,
+      ship: player.ship,
+      homeworld: player.homeworld
+    ),
+    updated_universe
   )
 }
