@@ -65,8 +65,9 @@ pub fn generate_planet_test() {
     universe_types.Terraforming,
     universe_types.Technology,
     universe_types.Cloning,
-    universe_types.Wasteland,
-    universe_types.Uncharted,
+    universe_types.Shipyard,
+    universe_types.Classified,
+    universe_types.Undefined
   ]
   should.be_true(list.any(valid_industries, fn(i) { i == planet.industry }))
 }

@@ -48,7 +48,7 @@ pub fn main() {
 }
 
 fn setup() -> Result(GameState, String) {
-  let universe = universe.create_universe(100, 40)
+  let universe = universe.create_universe(100, 60)
   let ship = ship.new_ship(ship.Shuttle, #(0, 0))
   case player.new("Player", ship.class) {
     Ok(player) -> {
@@ -331,11 +331,89 @@ pub fn npc_turn(
   player
 }
 
+import gleam/option
+
+// Update the price of a single trade good with some random fluctuation
+fn fluctuate_price(trade_good: universe.TradeStuff) -> universe.TradeStuff {
+  let fluctuation = int.random(21) - 10  // Random number between -10 and +10
+  
+  case trade_good {
+    universe.Protein(name, price, quantity) -> {
+      let new_price = int.max(1, price + fluctuation)
+      universe.Protein(name, new_price, quantity)
+    }
+    universe.Hydro(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 10, 1000)
+      universe.Hydro(name, new_price, quantity)
+    }
+    universe.Fuel(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 50, 1000)
+      universe.Fuel(name, new_price, quantity)
+    }
+    universe.SpareParts(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 25, 1000)
+      universe.SpareParts(name, new_price, quantity)
+    }
+    universe.Mineral(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 100, 1000)
+      universe.Mineral(name, new_price, quantity)
+    }
+    universe.Habitat(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 500, 5000)
+      universe.Habitat(name, new_price, quantity)
+    }
+    universe.Weapons(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10000)
+      universe.Weapons(name, new_price, quantity)
+    }
+    universe.Shields(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10000)
+      universe.Shields(name, new_price, quantity)
+    }
+  }
+}
+
+// Update all trade goods on a planet with price fluctuations
+fn update_planet_prices(planet: universe.Planet) -> universe.Planet {
+  let updated_goods = list.map(planet.trade_goods, fluctuate_price)
+  universe.Planet(
+    position: planet.position,
+    life_supporting: planet.life_supporting,
+    population: planet.population,
+    water_percentage: planet.water_percentage,
+    oxygen_percentage: planet.oxygen_percentage,
+    gravity: planet.gravity,
+    industry: planet.industry,
+    mapping_percentage: planet.mapping_percentage,
+    name: planet.name,
+    moons: planet.moons,
+    has_starport: planet.has_starport,
+    has_ftl_lane: planet.has_ftl_lane,
+    trade_allowed: planet.trade_allowed,
+    trade_goods: updated_goods
+  )
+}
+
 pub fn environment_turn(
-  _universe: universe.Universe,
+  universe: universe.Universe,
   player: player.Player,
 ) -> player.Player {
-  io.println("Environment's turn\n")
-  // Environment turn logic will go here
-  player
+  io.println("Environment's turn - updating trade good prices...")
+  
+  // Update prices on all planets
+  let updated_planets = list.map(universe.planets, update_planet_prices)
+  let updated_universe = universe.Universe(
+    size: universe.size,
+    planets: updated_planets
+  )
+  
+  // Return the player with the updated universe
+  // Note: The Player type only has name, ship, and homeworld fields
+  // So we can't store the current planet or inventory in the Player type
+  // You might want to update the Player type if you need to track these
+  player.Player(
+    name: player.name,
+    ship: player.ship,
+    homeworld: player.homeworld
+  )
 }
