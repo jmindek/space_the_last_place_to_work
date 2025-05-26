@@ -1,13 +1,17 @@
+import gleam/float
 import gleam/int
 import gleam/io
 import gleam/list
+import gleam/option
 import gleam/result
 import gleam/string
 import player
 import ship
 import title_screen
+import trade
 import trade_goods
 import universe
+import utils
 
 // Game state type to represent the game's state
 pub type GameState {
@@ -15,15 +19,11 @@ pub type GameState {
   Quit
 }
 
-// I was returning a Result<String, String> but it was not working. I just need a string.
-@external(erlang, "io", "get_line")
-pub fn get_line(prompt: String) -> String
-
 fn with_quit_prompt(
   prompt: String,
   on_continue: fn() -> Result(GameState, String),
 ) -> Result(GameState, String) {
-  let input = string.trim(get_line(prompt))
+  let input = utils.get_trimmed_line(prompt)
   case string.lowercase(input) {
     "q" -> {
       io.println("Quitting\n")
@@ -75,43 +75,71 @@ fn setup() -> Result(GameState, String) {
       )
   }
 
-  // Create player
-  case player.new("Player", ship.Shuttle) {
-    Ok(player) -> {
-      // Set homeworld and position
-      let updated_player =
-        player.set_homeworld(player, homeworld)
-        |> result.unwrap(player)
-      // Fallback to original player if error
+  // Create a test player for now
+  let player =
+    player.Player(
+      name: "Test Player",
+      ship: ship.Ship(
+        location: #(0, 0),
+        speed: 1,
+        max_speed: 10,
+        class: ship.Freighter,
+        crew_size: 4,
+        fuel_units: 100,
+        max_fuel_units: 100,
+        shields: 0,
+        max_shields: 0,
+        weapons: 0,
+        max_weapons: 5,
+        cargo_holds: 0,
+        max_cargo_holds: 10,
+        passenger_holds: 0,
+        max_passenger_holds: 5,
+      ),
+      homeworld: option.Some(homeworld),
+      credits: 1000,
+      cargo: [
+        #(trade_goods.Protein("Protein", 10, 0), 0),
+        #(trade_goods.Hydro("Hydro", 15, 0), 0),
+        #(trade_goods.Fuel("Fuel", 5, 0), 0),
+        #(trade_goods.SpareParts("Spare Parts", 30, 0), 0),
+        #(trade_goods.Mineral("Mineral", 8, 0), 0),
+        #(trade_goods.Habitat("Habitat", 50, 0), 0),
+        #(trade_goods.Weapons("Weapons", 100, 0), 0),
+        #(trade_goods.Shields("Shields", 80, 0), 0),
+      ],
+    )
 
-      // Move ship to homeworld coordinates
-      let final_player =
-        player.move_ship(
-          updated_player,
-          homeworld.position.x,
-          homeworld.position.y,
-          universe,
-        )
-        |> result.unwrap(updated_player)
-      // Fallback to previous player if error
+  let updated_player =
+    player.set_homeworld(player, homeworld)
+    |> result.unwrap(player)
+  // Fallback to original player if error
 
-      // Log starting location
-      let coords =
-        string.concat([
-          "\nStarting at ",
-          homeworld.name,
-          " at coordinates (",
-          int.to_string(homeworld.position.x),
-          ":",
-          int.to_string(homeworld.position.y),
-          ")\n",
-        ])
-      io.println(coords)
+  // Move ship to homeworld coordinates
+  let final_player =
+    player.move_ship(
+      updated_player,
+      homeworld.position.x,
+      homeworld.position.y,
+      universe,
+    )
+    |> result.unwrap(updated_player)
+  // Fallback to previous player if error
 
-      Ok(Continue(final_player, universe))
-    }
-    Error(e) -> Error("Failed to create player: " <> e)
-  }
+  // Log starting location
+  let coords =
+    string.concat([
+      "\nStarting at ",
+      homeworld.name,
+      " at coordinates (",
+      int.to_string(homeworld.position.x),
+      ":",
+      int.to_string(homeworld.position.y),
+      ")\n",
+    ])
+  io.println(coords)
+
+  Ok(Continue(final_player, universe))
 }
 
 fn game_loop(player: player.Player, universe: universe.Universe) -> Nil {
@@ -143,37 +171,62 @@ pub fn turn(universe: universe.Universe, player: player.Player) -> GameState {
 }
 
 fn player_turn(universe: universe.Universe, player: player.Player) -> GameState {
-  let player.Player(name, ship, _) = player
+  let player.Player(name, ship, _, credits, cargo) = player
   let #(x, y) = ship.location
   let current_speed = ship.speed
   let max_speed = ship.max_speed
+  let fuel = ship.fuel_units
 
   // Show status
   io.println(
     name
-    <> " your location is "
+    <> ", your location is "
     <> int.to_string(x)
     <> ":"
     <> int.to_string(y)
     <> ".",
   )
-  io.println("You have " <> int.to_string(ship.fuel_units) <> " fuel.")
+  io.println("Credits: " <> int.to_string(credits))
+  io.println(
+    "Fuel: " <> int.to_string(fuel) <> "/" <> int.to_string(ship.max_fuel_units),
+  )
+  io.println(
+    "Cargo: "
+    <> int.to_string(list.length(cargo))
+    <> "/"
+    <> int.to_string(ship.max_cargo_holds),
+  )
   io.println(
     "Current speed: "
     <> int.to_string(current_speed)
     <> "/"
     <> int.to_string(max_speed),
   )
-  io.println("Commands:")
+  // Check if player is at a planet with a starport
+  let current_planet =
+    list.find(universe.planets, fn(p) { p.position.x == x && p.position.y == y })
+
+  io.println("\nCommands:")
   io.println("  M - Move")
   io.println("  I - Show ship info")
   io.println("  T# - Set speed (1-" <> int.to_string(max_speed) <> ")")
   io.println("  L - Show location map")
+
+  // Show system info and trade options if at a planet
+  case current_planet {
+    Ok(planet) ->
+      case planet.has_starport {
+        True -> io.println("  B - Trade at " <> planet.name <> "'s starport")
+        False -> io.println("  (No starport in this system)")
+      }
+    Error(_) -> io.println("  (No planet at current location)")
+  }
+
   io.println("  Q - Quit")
   io.print("> ")
 
   // Get command and convert to uppercase for case-insensitive matching
-  let command = string.uppercase(string.trim(get_line("")))
+  let command = string.uppercase(string.trim(utils.get_line("")))
 
   // Handle empty input first
   case command == "" {
@@ -187,15 +240,46 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
           io.println("\nShip Status:")
           io.println(ship_info)
           io.println("\nPress Enter to continue...")
-          let _ = get_line("")
+          let _ = utils.get_line("")
           Continue(player, universe)
         }
         // Show location map
         "L" -> {
           show_location_map(ship.location, universe)
           io.println("\nPress Enter to continue...")
-          let _ = get_line("")
+          let _ = utils.get_line("")
           Continue(player, universe)
+        }
+        // Trade at starport
+        "B" -> {
+          case current_planet {
+            Ok(planet) -> {
+              case planet.has_starport {
+                True -> {
+                  // Show trade menu
+                  io.println("\nDocking at " <> planet.name <> "'s starport...")
+                  case trade.show_trade_menu(player, planet) {
+                    Ok(updated_player) -> {
+                      io.println("\nLeaving starport...")
+                      Continue(updated_player, universe)
+                    }
+                    Error(e) -> {
+                      io.println("Error in trade: " <> e)
+                      Continue(player, universe)
+                    }
+                  }
+                }
+                False -> {
+                  io.println("No starport at " <> planet.name <> "!")
+                  Continue(player, universe)
+                }
+              }
+            }
+            Error(_) -> {
+              io.println("No planet at current location!")
+              Continue(player, universe)
+            }
+          }
         }
         // Quit command
         "Q" -> Quit
@@ -205,7 +289,7 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
           io.print("> ")
 
           // Get the input and split by colon
-          let input = string.trim(get_line(""))
+          let input = string.trim(utils.get_line(""))
 
           // Split input on colon
           case string.split(input, ":") {
@@ -268,6 +352,118 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
             }
             _ -> {
               io.println("Invalid input format. Please use X:Y")
+              Continue(player, universe)
+            }
+          }
+        }
+        // Show system information
+        "S" -> {
+          case current_planet {
+            Ok(planet) -> {
+              io.println("\n=== " <> planet.name <> " ===")
+              io.println(
+                "Population: " <> int.to_string(planet.population) <> " million",
+              )
+              io.println(
+                "Water: " <> int.to_string(planet.water_percentage) <> "%",
+              )
+              io.println(
+                "Oxygen: " <> int.to_string(planet.oxygen_percentage) <> "%",
+              )
+              io.println("Gravity: " <> float.to_string(planet.gravity) <> "G")
+              io.println(
+                "Industry: " <> universe.industry_to_string(planet.industry),
+              )
+              io.println("Moons: " <> int.to_string(planet.moons))
+              let starport_status = case planet.has_starport {
+                True -> "Yes"
+                False -> "No"
+              }
+              io.println("Starport: " <> starport_status)
+
+              // Show trade goods if any
+              case planet.trade_goods {
+                [] -> io.println("\nNo trade goods available")
+                goods -> {
+                  io.println("\nAvailable goods:")
+                  let _ =
+                    list.each(goods, fn(good: trade_goods.TradeGoods) {
+                      let name = case good {
+                        trade_goods.Protein(n, _, _) -> n
+                        trade_goods.Hydro(n, _, _) -> n
+                        trade_goods.Fuel(n, _, _) -> n
+                        trade_goods.SpareParts(n, _, _) -> n
+                        trade_goods.Mineral(n, _, _) -> n
+                        trade_goods.Habitat(n, _, _) -> n
+                        trade_goods.Weapons(n, _, _) -> n
+                        trade_goods.Shields(n, _, _) -> n
+                      }
+                      let price = case good {
+                        trade_goods.Protein(_, p, _) -> p
+                        trade_goods.Hydro(_, p, _) -> p
+                        trade_goods.Fuel(_, p, _) -> p
+                        trade_goods.SpareParts(_, p, _) -> p
+                        trade_goods.Mineral(_, p, _) -> p
+                        trade_goods.Habitat(_, p, _) -> p
+                        trade_goods.Weapons(_, p, _) -> p
+                        trade_goods.Shields(_, p, _) -> p
+                      }
+                      let quantity = case good {
+                        trade_goods.Protein(_, _, q) -> q
+                        trade_goods.Hydro(_, _, q) -> q
+                        trade_goods.Fuel(_, _, q) -> q
+                        trade_goods.SpareParts(_, _, q) -> q
+                        trade_goods.Mineral(_, _, q) -> q
+                        trade_goods.Habitat(_, _, q) -> q
+                        trade_goods.Weapons(_, _, q) -> q
+                        trade_goods.Shields(_, _, q) -> q
+                      }
+                      io.println(
+                        "  - "
+                        <> name
+                        <> ": "
+                        <> int.to_string(price)
+                        <> " credits ("
+                        <> int.to_string(quantity)
+                        <> " available)",
+                      )
+                    })
+                }
+              }
+
+              // Show player's cargo if any
+              case player.cargo {
+                [] -> {
+                  io.println("\nYour cargo is empty.")
+                }
+                cargo -> {
+                  io.println("\nYour cargo:")
+                  let _ =
+                    list.each(cargo, fn(pair: #(trade_goods.TradeGoods, Int)) {
+                      let name = case pair.0 {
+                        trade_goods.Protein(n, _, _) -> n
+                        trade_goods.Hydro(n, _, _) -> n
+                        trade_goods.Fuel(n, _, _) -> n
+                        trade_goods.SpareParts(n, _, _) -> n
+                        trade_goods.Mineral(n, _, _) -> n
+                        trade_goods.Habitat(n, _, _) -> n
+                        trade_goods.Weapons(n, _, _) -> n
+                        trade_goods.Shields(n, _, _) -> n
+                      }
+                      let qty = pair.1
+                      io.println(
+                        "  - " <> name <> ": " <> int.to_string(qty) <> " units",
+                      )
+                    })
+                }
+              }
+
+              io.println("\nPress Enter to continue...")
+              let _ = utils.get_line("")
+              Continue(player, universe)
+            }
+            Error(_) -> {
+              io.println("No planet at current location!")
               Continue(player, universe)
             }
           }
@@ -465,6 +661,8 @@ pub fn environment_turn(
       name: player.name,
       ship: player.ship,
       homeworld: player.homeworld,
+      credits: player.credits,
+      cargo: player.cargo,
     ),
     updated_universe,
   )

@@ -3,6 +3,7 @@ import gleam/option
 import gleam/regex
 import gleam/string
 import ship
+import trade_goods
 import universe
 
 // Player type that holds all player information
@@ -11,6 +12,9 @@ pub type Player {
     name: String,
     ship: ship.Ship,
     homeworld: option.Option(universe.Planet),
+    credits: Int,
+    cargo: List(#(trade_goods.TradeGoods, Int)),
+    // (TradeGood type, quantity)
   )
 }
 
@@ -64,7 +68,15 @@ pub fn new(name: String, ship_class: ship.ShipClass) -> Result(Player, String) {
   case validate_name(name) {
     Ok(valid_name) -> {
       let player_ship = new_ship(ship_class)
-      Ok(Player(name: valid_name, ship: player_ship, homeworld: option.None))
+      Ok(Player(
+        name: valid_name,
+        ship: player_ship,
+        homeworld: option.None,
+        credits: 1000,
+        // Starting credits
+        cargo: [],
+        // Start with empty cargo
+      ))
     }
     Error(e) -> Error(e)
   }
@@ -86,7 +98,15 @@ pub fn set_homeworld(
 ) -> Result(Player, String) {
   case planet.has_starport {
     True -> {
-      let updated_player = Player(..player, homeworld: option.Some(planet))
+      let updated_player =
+        Player(
+          ..player,
+          homeworld: option.Some(planet),
+          credits: 1000,
+          // Ensure credits are set
+          cargo: player.cargo,
+          // Keep existing cargo
+        )
       Ok(updated_player)
     }
     False -> Error("Selected planet does not have a starport")

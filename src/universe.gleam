@@ -39,15 +39,17 @@ pub type Planet {
   )
 }
 
-pub type TradeGoods {
-  Protein(name: String, price: Int, quantity: Int)
-  Hydro(name: String, price: Int, quantity: Int)
-  Fuel(name: String, price: Int, quantity: Int)
-  Mineral(name: String, price: Int, quantity: Int)
-  Habitat(name: String, price: Int, quantity: Int)
-  Weapons(name: String, price: Int, quantity: Int)
-  Shields(name: String, price: Int, quantity: Int)
-  SpareParts(name: String, price: Int, quantity: Int)
+pub fn industry_to_string(industry: IndustryType) -> String {
+  case industry {
+    Agra -> "Agriculture"
+    Mining -> "Mining"
+    Terraforming -> "Terraforming"
+    Technology -> "Technology"
+    Cloning -> "Cloning"
+    Shipyard -> "Shipyard"
+    Classified -> "Classified"
+    Undefined -> "Undefined"
+  }
 }
 
 pub type Universe {
