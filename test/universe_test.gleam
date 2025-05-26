@@ -67,7 +67,7 @@ pub fn generate_planet_test() {
     universe_types.Cloning,
     universe_types.Shipyard,
     universe_types.Classified,
-    universe_types.Undefined
+    universe_types.Undefined,
   ]
   should.be_true(list.any(valid_industries, fn(i) { i == planet.industry }))
 }

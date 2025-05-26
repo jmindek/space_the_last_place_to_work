@@ -1,8 +1,8 @@
-import gleam/io
-import gleam/result
 import gleam/int
-import gleam/string
+import gleam/io
 import gleam/list
+import gleam/result
+import gleam/string
 import player
 import ship
 import title_screen
@@ -51,11 +51,11 @@ pub fn main() {
 
 fn setup() -> Result(GameState, String) {
   let universe = universe.create_universe(100, 60)
-  
+
   // Find the first planet to use as homeworld
   let homeworld = case universe.planets {
     [first_planet, ..] -> first_planet
-    _ -> 
+    _ ->
       // Create a default homeworld if no planets exist
       universe.Planet(
         position: universe.Position(x: 50, y: 50),
@@ -71,40 +71,43 @@ fn setup() -> Result(GameState, String) {
         has_starport: True,
         has_ftl_lane: True,
         trade_allowed: True,
-        trade_goods: []
+        trade_goods: [],
       )
   }
-  
+
   // Create player
   case player.new("Player", ship.Shuttle) {
     Ok(player) -> {
       // Set homeworld and position
-      let updated_player = 
+      let updated_player =
         player.set_homeworld(player, homeworld)
-        |> result.unwrap(player)  // Fallback to original player if error
-        
+        |> result.unwrap(player)
+      // Fallback to original player if error
+
       // Move ship to homeworld coordinates
-      let final_player = 
+      let final_player =
         player.move_ship(
           updated_player,
           homeworld.position.x,
           homeworld.position.y,
-          universe
+          universe,
         )
-        |> result.unwrap(updated_player)  // Fallback to previous player if error
-      
+        |> result.unwrap(updated_player)
+      // Fallback to previous player if error
+
       // Log starting location
-      let coords = string.concat([
-        "\nStarting at ", 
-        homeworld.name, 
-        " at coordinates (",
-        int.to_string(homeworld.position.x),
-        ":",
-        int.to_string(homeworld.position.y),
-        ")\n"
-      ])
+      let coords =
+        string.concat([
+          "\nStarting at ",
+          homeworld.name,
+          " at coordinates (",
+          int.to_string(homeworld.position.x),
+          ":",
+          int.to_string(homeworld.position.y),
+          ")\n",
+        ])
       io.println(coords)
-      
+
       Ok(Continue(final_player, universe))
     }
     Error(e) -> Error("Failed to create player: " <> e)
@@ -116,7 +119,8 @@ fn game_loop(player: player.Player, universe: universe.Universe) -> Nil {
     Continue(updated_player, updated_universe) -> {
       // Continue with NPC and environment turns
       let next_player = npc_turn(updated_universe, updated_player)
-      let #(next_player, updated_universe) = environment_turn(updated_universe, next_player)
+      let #(next_player, updated_universe) =
+        environment_turn(updated_universe, next_player)
       game_loop(next_player, updated_universe)
     }
     Quit -> {
@@ -130,7 +134,8 @@ pub fn turn(universe: universe.Universe, player: player.Player) -> GameState {
   case player_turn(universe, player) {
     Continue(updated_player, updated_universe) -> {
       let next_player = npc_turn(updated_universe, updated_player)
-      let #(next_player, updated_universe) = environment_turn(updated_universe, next_player)
+      let #(next_player, updated_universe) =
+        environment_turn(updated_universe, next_player)
       Continue(next_player, updated_universe)
     }
     Quit -> Quit
@@ -459,8 +464,8 @@ pub fn environment_turn(
     player.Player(
       name: player.name,
       ship: player.ship,
-      homeworld: player.homeworld
+      homeworld: player.homeworld,
     ),
-    updated_universe
+    updated_universe,
   )
 }
