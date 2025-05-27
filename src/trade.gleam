@@ -278,25 +278,30 @@ fn buy_goods(
     }
     Ok(item_index) -> {
       // Get the selected good and its price
-      let #(selected_good, price_per_unit) = 
-        case list.drop(planet.trade_goods, item_index - 1) {
-          [good, ..] -> #(good, trade_goods.get_price(good))
-          _ -> #(trade_goods.Protein("", 0, 0), 0)  // Default values if item not found
-        }
-      
+      let #(selected_good, price_per_unit) = case
+        list.drop(planet.trade_goods, item_index - 1)
+      {
+        [good, ..] -> #(good, trade_goods.get_price(good))
+        _ -> #(trade_goods.Protein("", 0, 0), 0)
+        // Default values if item not found
+      }
+
       // Calculate maximum quantity based on available quantity and player's credits
       let available_qty = trade_goods.get_quantity(selected_good)
-      let max_affordable = player.credits / price_per_unit  // Integer division is fine here
+      let max_affordable = player.credits / price_per_unit
+      // Integer division is fine here
       let max_qty = int.min(available_qty, max_affordable)
-      
+
       // Get quantity from user
       io.print("Enter quantity to buy (or press Enter for max): ")
       let qty_input = utils.get_trimmed_line("")
       let quantity = case qty_input {
-        "" -> max_qty  // Use max affordable quantity when Enter is pressed
+        "" -> max_qty
+        // Use max affordable quantity when Enter is pressed
         _ ->
           case int.parse(qty_input) {
-            Ok(q) -> int.min(q, max_qty)  // Don't allow more than max affordable
+            Ok(q) -> int.min(q, max_qty)
+            // Don't allow more than max affordable
             _ -> 1
           }
       }
@@ -530,16 +535,18 @@ pub fn sell_cargo(
                 False -> {
                   // Get item name for lookup
                   let item_name = trade_goods.get_name(item)
-                  
+
                   // Find the current market price
-                  let market_price = 
-                    case list.find(planet.trade_goods, fn(good) {
+                  let market_price = case
+                    list.find(planet.trade_goods, fn(good) {
                       trade_goods.get_name(good) == item_name
-                    }) {
-                      Ok(found_good) -> trade_goods.get_price(found_good)
-                      Error(_) -> trade_goods.get_price(item)  // Fallback to item's price if not found
-                    }
-                  
+                    })
+                  {
+                    Ok(found_good) -> trade_goods.get_price(found_good)
+                    Error(_) -> trade_goods.get_price(item)
+                    // Fallback to item's price if not found
+                  }
+
                   io.print("Enter your asking price per unit (current: ")
                   io.print(int.to_string(market_price))
                   io.print("): ")
@@ -639,7 +646,7 @@ pub fn sell_cargo(
                             False -> {
                               // Standard successful transaction
                               let total_price = price_per_unit * quantity
-                              
+
                               // Update player's credits and cargo
                               let updated_cargo =
                                 list.map(player.cargo, fn(p) {
@@ -649,15 +656,16 @@ pub fn sell_cargo(
                                   }
                                 })
                                 |> list.filter(fn(x) { x.1 > 0 })
-                              
-                              let updated_player = player.Player(
-                                name: player.name,
-                                ship: player.ship,
-                                homeworld: player.homeworld,
-                                credits: player.credits + total_price,
-                                cargo: updated_cargo,
-                              )
-                              
+
+                              let updated_player =
+                                player.Player(
+                                  name: player.name,
+                                  ship: player.ship,
+                                  homeworld: player.homeworld,
+                                  credits: player.credits + total_price,
+                                  cargo: updated_cargo,
+                                )
+
                               io.println(
                                 "\nOffer accepted! You've earned "
                                 <> int.to_string(total_price)
@@ -674,7 +682,9 @@ pub fn sell_cargo(
                               // Standard rejection for reasonable but not accepted offers
                               case price_ratio_percent > 200 {
                                 True -> {
-                                  io.println("No. We have anti-greed taxes here. Be careful or we will levy one upon you.")
+                                  io.println(
+                                    "No. We have anti-greed taxes here. Be careful or we will levy one upon you.",
+                                  )
                                 }
                                 False -> {
                                   io.println("No thank you.")

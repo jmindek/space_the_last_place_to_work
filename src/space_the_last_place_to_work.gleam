@@ -190,7 +190,7 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
   io.println(
     "Fuel: " <> int.to_string(fuel) <> "/" <> int.to_string(ship.max_fuel_units),
   )
-  let total_cargo = 
+  let total_cargo =
     cargo
     |> list.map(fn(pair) { pair.1 })
     |> list.fold(0, fn(quantity, acc) { acc + quantity })
