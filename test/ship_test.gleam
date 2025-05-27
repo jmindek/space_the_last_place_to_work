@@ -3,19 +3,19 @@ import ship
 
 pub fn new_ship_test() {
   // Test Shuttle
-  test_ship_initialization(ship.Shuttle, 4, 0, 2, 10000)
+  test_ship_initialization(ship.Shuttle, 4, 0, 2, 10_000)
 
   // Test Fighter
   test_ship_initialization(ship.Fighter, 1, 2, 4, 5000)
 
   // Test Freighter
-  test_ship_initialization(ship.Freighter, 2, 0, 2, 15000)
+  test_ship_initialization(ship.Freighter, 2, 0, 2, 15_000)
 
   // Test Luxury
-  test_ship_initialization(ship.Luxury, 8, 0, 2, 20000)
+  test_ship_initialization(ship.Luxury, 8, 0, 2, 20_000)
 
   // Test Research
-  test_ship_initialization(ship.Research, 10, 0, 0, 20000)
+  test_ship_initialization(ship.Research, 10, 0, 0, 20_000)
 
   // Test Classified
   test_ship_initialization(ship.Classified, 1, 0, 0, 0)
@@ -30,8 +30,7 @@ pub fn new_ship_test() {
   test_ship_initialization(ship.Rescue, 4, 4, 0, 5000)
 
   // Test Miner
-  test_ship_initialization(ship.Miner, 8, 4, 0, 15000)
-
+  test_ship_initialization(ship.Miner, 8, 4, 0, 15_000)
 }
 
 // Helper function to test ship initialization
