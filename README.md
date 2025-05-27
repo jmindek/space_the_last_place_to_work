@@ -22,7 +22,32 @@ A Gleam project themed on the 80s BBS space resource text based adventure games.
 
 I 100% guarantee this will not be near as fun as those. 
 
-## Development
+## Gameplay
+
+In Space: The Last Place to Work, players can:
+
+- **Navigate** between star systems and planets
+- **Trade** goods between different planets for profit
+- **Buy and sell** various trade goods with fluctuating prices
+
+
+### Coming Soon
+
+- **Battle** space pirates and other hostile forces
+- **Dock** at space stations to repair and resupply
+- **Manage** ship resources including fuel, shields, and cargo space
+
+### Future
+
+- **Complete** missions and contracts for credits
+- **Hire** crew members with different skills
+- **Encounter** random space events and make choices that affect the game
+- **Mine** asteroids for valuable resources
+- **Space** crew members (_how could this not be a feature???_)
+- **Upgrade** their ship with better equipment and cargo holds
+
+
+## Playing
 
 ### Prerequisites
 
@@ -60,12 +85,3 @@ I 100% guarantee this will not be near as fun as those.
    ```sh
    gleam run
    ```
-
-### Development Commands
-
-```sh
-gleam format src test    # Format the code
-gleam test   # Run the tests
-gleam shell  # Start an Erlang shell with the project loaded
-gleam build  # Compile the project
-```
