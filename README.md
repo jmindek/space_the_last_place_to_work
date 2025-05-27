@@ -20,12 +20,52 @@ More likely you'll burn out your remaining energy in the quest for riches and di
 
 A Gleam project themed on the 80s BBS space resource text based adventure games. 
 
-100% no guarantee this will be near as fun as those.
+I 100% guarantee this will not be near as fun as those. 
 
 ## Development
 
+### Prerequisites
+
+1. **Install Gleam**
+   - **macOS (using Homebrew)**:
+     ```sh
+     brew install gleam
+     ```
+     *Note: This will automatically install Erlang/OTP as a dependency*
+   
+   - **Windows**:
+     1. First install Erlang/OTP 25+:
+       - Using Chocolatey:
+         ```powershell
+         choco install erlang
+         ```
+       - Or download from [Erlang.org](https://www.erlang.org/downloads)
+     
+     2. Then install Gleam:
+       - Using Scoop:
+         ```powershell
+         scoop install gleam
+         ```
+       - Or download from [Gleam's website](https://gleam.run/getting-started/installing/)
+
+### Running the Game
+
+1. **Clone the repository**
+   ```sh
+   git clone https://github.com/jmindek/space_the_last_place_to_work.git
+   cd space_the_last_place_to_work
+   ```
+
+2. **Run the game**
+   ```sh
+   gleam run
+   ```
+
+### Development Commands
+
 ```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-gleam shell # Run an Erlang shell
+gleam format src test    # Format the code
+gleam test   # Run the tests
+gleam shell  # Start an Erlang shell with the project loaded
+gleam build  # Compile the project
 ```
