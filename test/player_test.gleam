@@ -4,6 +4,7 @@ import gleam/string
 import gleeunit/should
 import player
 import ship
+import trade_goods
 import universe
 
 // Helper function to create a test player
@@ -168,4 +169,38 @@ fn check_coordinates(x: Int, y: Int, size: Int) -> Nil {
   check_y_within_bounds
   |> should.be_true
   // Y coordinate should be < universe size
+}
+
+pub fn cargo_display_test() -> Nil {
+  // Create test cargo items
+  let protein = trade_goods.Protein("Test Protein", 10, 5)
+  let fuel = trade_goods.Fuel("Test Fuel", 20, 1)
+
+  // Test with non-empty cargo
+  let test_cargo = [
+    #(protein, 3),
+    // 3 units of protein
+    #(fuel, 2),
+    // 2 units of fuel
+  ]
+
+  // Calculate total cargo
+  let total_cargo =
+    test_cargo
+    |> list.map(fn(pair: #(trade_goods.TradeGoods, Int)) { pair.1 })
+    |> list.fold(0, fn(quantity, acc) { acc + quantity })
+
+  // Verify the total is calculated correctly
+  total_cargo
+  |> should.equal(5)
+
+  // Test with empty cargo
+  let empty_cargo = []
+  let empty_total =
+    empty_cargo
+    |> list.map(fn(pair: #(trade_goods.TradeGoods, Int)) { pair.1 })
+    |> list.fold(0, fn(quantity, acc) { acc + quantity })
+
+  empty_total
+  |> should.equal(0)
 }
