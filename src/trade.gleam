@@ -1,13 +1,58 @@
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/result
 import gleam/string
 import player
 import ship
 import trade_goods
 import universe
 import utils
+
+// Handle the offer response based on price ratio
+fn handle_offer_response(
+  price_ratio_percent: Int,
+  price_per_unit: Int,
+  quantity: Int,
+  current_player: player.Player,
+) -> player.Player {
+  case price_ratio_percent {
+    r if r <= 100 -> {
+      io.println("No thank you.")
+      current_player
+    }
+    r if r <= 200 -> {
+      io.println(
+        "No. We have anti-greed taxes here. Be careful or we will levy one upon you.",
+      )
+      current_player
+    }
+    _ -> {
+      // Handle excessive offer (>200% of base price)
+      // Apply greed tax (50% of asking price) using integer arithmetic
+      let total = price_per_unit * quantity
+      let tax = total / 2
+      // Integer division is fine here as we want to round down
+      let new_credits = current_player.credits - tax
+
+      // Create and return the updated player with the greed tax applied
+      let updated_player =
+        player.Player(
+          name: current_player.name,
+          ship: current_player.ship,
+          homeworld: current_player.homeworld,
+          credits: new_credits,
+          cargo: current_player.cargo,
+        )
+
+      io.println(
+        "The starport has levied a greed tax of "
+        <> int.to_string(tax)
+        <> " credits for your outrageous prices!",
+      )
+      updated_player
+    }
+  }
+}
 
 // Helper function to add items to player's cargo
 fn add_to_cargo(
@@ -55,8 +100,32 @@ pub fn show_trade_menu(
   io.println("\n=== Trading Post ===")
   io.println("Credits: " <> int.to_string(player.credits))
 
+  // Show player's cargo
+  io.println("\nYour cargo:")
+  case player.cargo {
+    [] -> io.println("  Your cargo hold is empty.")
+    _ -> {
+      let _ =
+        list.each(player.cargo, fn(pair: #(trade_goods.TradeGoods, Int)) {
+          let #(item, qty) = pair
+          let name = case item {
+            trade_goods.Protein(n, _, _) -> n
+            trade_goods.Hydro(n, _, _) -> n
+            trade_goods.Fuel(n, _, _) -> n
+            trade_goods.SpareParts(n, _, _) -> n
+            trade_goods.Mineral(n, _, _) -> n
+            trade_goods.Habitat(n, _, _) -> n
+            trade_goods.Weapons(n, _, _) -> n
+            trade_goods.Shields(n, _, _) -> n
+          }
+          io.println("  - " <> name <> ": " <> int.to_string(qty) <> " units")
+        })
+      io.println("")
+    }
+  }
+
   // Show available goods with prices and quantities
-  io.println("\nAvailable goods:")
+  io.println("\nStarport's goods:")
   let _ =
     list.each(planet.trade_goods, fn(good: trade_goods.TradeGoods) {
       let name = case good {
@@ -126,31 +195,23 @@ pub fn show_trade_menu(
   io.println("\nOptions:")
   io.println("1. Buy")
   io.println("2. Sell")
-  io.println("3. Leave")
+  io.println("0. Back")
+  io.print("\nSelect an option: ")
+  let choice = utils.get_trimmed_line("")
 
-  io.print("\nSelect an option (1-3): ")
-  let input = utils.get_trimmed_line("")
-
-  case input {
-    "1" -> handle_buy(player, planet)
-    "2" -> {
-      io.println("\nSelling items... (not implemented yet)")
-      // TODO: Implement selling logic
-      Ok(player)
-    }
-    "3" -> {
-      io.println("Leaving starport...")
-      Ok(player)
-    }
+  case choice {
+    "1" -> buy_goods(player, planet)
+    "2" -> sell_cargo(player, planet)
+    "0" -> Ok(player)
     _ -> {
-      io.println("Invalid option. Please select 1-3.")
+      io.println("Invalid choice. Please try again.")
       Ok(player)
     }
   }
 }
 
 // Handle the buy operation
-fn handle_buy(
+fn buy_goods(
   player: player.Player,
   planet: universe.Planet,
 ) -> Result(player.Player, String) {
@@ -261,7 +322,7 @@ fn handle_buy(
 // Process a purchase transaction
 pub fn process_purchase(
   player: player.Player,
-  planet: universe.Planet,
+  _planet: universe.Planet,
   good: trade_goods.TradeGoods,
   quantity: Int,
 ) -> Result(player.Player, String) {
@@ -362,6 +423,267 @@ pub fn process_purchase(
               Ok(updated_player)
             }
           }
+        }
+      }
+    }
+  }
+}
+
+// Sell cargo to the starport
+pub fn sell_cargo(
+  player: player.Player,
+  planet: universe.Planet,
+) -> Result(player.Player, String) {
+  // Show player's cargo with indices
+  case player.cargo {
+    [] -> {
+      io.println("You have no cargo to sell.")
+      Ok(player)
+    }
+    _ -> {
+      io.println("\nYour cargo:")
+      let _ =
+        list.index_fold(
+          player.cargo,
+          1,
+          // Start index at 1 for display
+          fn(index, item_with_qty, _) {
+            case item_with_qty {
+              #(item, qty) -> {
+                let name = case item {
+                  trade_goods.Protein(n, _, _) -> n
+                  trade_goods.Hydro(n, _, _) -> n
+                  trade_goods.Fuel(n, _, _) -> n
+                  trade_goods.SpareParts(n, _, _) -> n
+                  trade_goods.Mineral(n, _, _) -> n
+                  trade_goods.Habitat(n, _, _) -> n
+                  trade_goods.Weapons(n, _, _) -> n
+                  trade_goods.Shields(n, _, _) -> n
+                }
+                io.println(
+                  string.concat([
+                    int.to_string(index),
+                    ". ",
+                    name,
+                    " - ",
+                    int.to_string(qty),
+                    " units",
+                  ]),
+                )
+                index + 1
+                // Increment the index for the next item
+              }
+            }
+          },
+        )
+
+      // Get item selection
+      io.print("\nSelect an item to sell (1-")
+      io.print(int.to_string(list.length(player.cargo)))
+      io.print(") or 0 to cancel: ")
+      let item_input = utils.get_trimmed_line("")
+
+      case int.parse(item_input) {
+        Ok(0) -> {
+          io.println("Sale cancelled.")
+          Ok(player)
+        }
+        Ok(item_index) -> {
+          // Get the selected item using list.drop and pattern matching
+          case list.drop(player.cargo, item_index - 1) {
+            [pair, ..] -> {
+              let #(item, available_qty) = pair
+
+              // Get quantity to sell
+              io.print("Enter quantity to sell (1-")
+              io.print(int.to_string(available_qty))
+              io.print(" or press Enter for all): ")
+              let qty_input = utils.get_trimmed_line("")
+
+              let quantity = case qty_input {
+                "" -> available_qty
+                _ ->
+                  case int.parse(qty_input) {
+                    Ok(q) -> int.min(q, available_qty)
+                    _ -> available_qty
+                  }
+              }
+
+              // Validate quantity
+              case quantity <= 0 {
+                True -> {
+                  io.println("Quantity must be positive.")
+                  Ok(player)
+                }
+                False -> {
+                  // Get asking price
+                  io.print("Enter your asking price per unit: ")
+                  let price_input = utils.get_trimmed_line("")
+
+                  case int.parse(price_input) {
+                    Ok(price_per_unit) -> {
+                      // Check if starport has this item
+                      let starport_has_item =
+                        list.any(planet.trade_goods, fn(g) {
+                          case g, item {
+                            trade_goods.Protein(n1, _, _),
+                              trade_goods.Protein(n2, _, _)
+                            -> n1 == n2
+                            trade_goods.Hydro(n1, _, _),
+                              trade_goods.Hydro(n2, _, _)
+                            -> n1 == n2
+                            trade_goods.Fuel(n1, _, _),
+                              trade_goods.Fuel(n2, _, _)
+                            -> n1 == n2
+                            trade_goods.SpareParts(n1, _, _),
+                              trade_goods.SpareParts(n2, _, _)
+                            -> n1 == n2
+                            trade_goods.Mineral(n1, _, _),
+                              trade_goods.Mineral(n2, _, _)
+                            -> n1 == n2
+                            trade_goods.Habitat(n1, _, _),
+                              trade_goods.Habitat(n2, _, _)
+                            -> n1 == n2
+                            trade_goods.Weapons(n1, _, _),
+                              trade_goods.Weapons(n2, _, _)
+                            -> n1 == n2
+                            trade_goods.Shields(n1, _, _),
+                              trade_goods.Shields(n2, _, _)
+                            -> n1 == n2
+                            _, _ -> False
+                          }
+                        })
+
+                      // Get base price of the item
+                      let base_price = case item {
+                        trade_goods.Protein(_, p, _) -> p
+                        trade_goods.Hydro(_, p, _) -> p
+                        trade_goods.Fuel(_, p, _) -> p
+                        trade_goods.SpareParts(_, p, _) -> p
+                        trade_goods.Mineral(_, p, _) -> p
+                        trade_goods.Habitat(_, p, _) -> p
+                        trade_goods.Weapons(_, p, _) -> p
+                        trade_goods.Shields(_, p, _) -> p
+                      }
+
+                      // Calculate price ratio as percentage using integer arithmetic
+                      let price_ratio_percent =
+                        price_per_unit * 100 / base_price
+
+                      // Determine acceptance chance based on price ratio and starport inventory
+                      let acceptance_chance = case starport_has_item {
+                        True -> {
+                          case price_ratio_percent {
+                            r if r <= 100 -> 0
+                            r if r <= 150 -> 35
+                            r if r <= 200 -> 50
+                            _ -> 25
+                          }
+                        }
+                        False -> {
+                          case price_ratio_percent {
+                            r if r <= 100 -> 90
+                            r if r <= 150 -> 75
+                            r if r <= 200 -> 50
+                            _ -> 25
+                          }
+                        }
+                      }
+
+                      // Generate random number between 1 and 100
+                      let random_chance = utils.random_range(1, 100)
+                      // Convert acceptance chance to integer percentage and compare with random chance
+                      let accepted = acceptance_chance >= random_chance
+
+                      // Process the sale
+                      case accepted {
+                        True -> {
+                          // Calculate total price
+                          let total_price = price_per_unit * quantity
+
+                          // Update player's credits and cargo
+                          let new_credits = player.credits + total_price
+
+                          // Remove sold items from cargo
+                          let updated_cargo =
+                            list.map(player.cargo, fn(pair) {
+                              let #(i, q) = pair
+                              case i == item {
+                                True -> #(i, q - quantity)
+                                False -> pair
+                              }
+                            })
+                            |> list.filter(fn(pair) {
+                              let #(_, q) = pair
+                              q > 0
+                            })
+
+                          // Create and return the updated player
+                          let updated_player =
+                            player.Player(
+                              name: player.name,
+                              ship: player.ship,
+                              homeworld: player.homeworld,
+                              credits: new_credits,
+                              cargo: updated_cargo,
+                            )
+
+                          io.println(
+                            "\nOffer accepted! You've earned "
+                            <> int.to_string(total_price)
+                            <> " credits.",
+                          )
+                          Ok(updated_player)
+                        }
+                        False -> {
+                          // Starport rejects the offer
+                          case starport_has_item {
+                            True -> {
+                              // Check if price is too high (>200% of base price)
+                              case price_ratio_percent > 200 {
+                                True -> {
+                                  // Apply greed tax for excessive price
+                                  let taxed_player =
+                                    handle_offer_response(
+                                      price_ratio_percent,
+                                      price_per_unit,
+                                      quantity,
+                                      player,
+                                    )
+                                  Ok(taxed_player)
+                                }
+                                False -> {
+                                  // Standard rejection for reasonable but not accepted offers
+                                  io.println("No thank you.")
+                                  Ok(player)
+                                }
+                              }
+                            }
+                            False -> {
+                              io.println("We're not interested in that price.")
+                              Ok(player)
+                            }
+                          }
+                        }
+                      }
+                    }
+                    _ -> {
+                      io.println("Invalid price. Please enter a number.")
+                      Ok(player)
+                    }
+                  }
+                }
+              }
+            }
+            _ -> {
+              io.println("Invalid item selection.")
+              Ok(player)
+            }
+          }
+        }
+        _ -> {
+          io.println("Invalid selection.")
+          Ok(player)
         }
       }
     }
