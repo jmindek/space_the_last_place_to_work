@@ -18,9 +18,16 @@ Space, it's the last place to work. Can you make a living?
 Maybe. 
 More likely you'll burn out your remaining energy in the quest for riches and die drifting alone encouraging your crew not to eat each other (for decencies sake) in some uncharted part of space.
 
-A Gleam project themed on the 80s BBS space resource text based adventure games. 
+## Inspiration
 
-I 100% guarantee this will not be near as fun as those. 
+My Gleam side-project is an homage to 80s BBS ANSI adventure games I used to play as a kid. The main source of inspiration is [Trade Wars 2002](https://en.wikipedia.org/wiki/Trade_Wars). But I also enjoyed and hope to pull from [Legend of the Red Dragon](https://en.wikipedia.org/wiki/Legend_of_the_Red_Dragon), Freshwater Fishing Simulator and others.
+
+## Why Gleam?
+
+I love new non-OO languages and right now I'm learning Gleam. To fast-track my learning, I figured I would build something fun.
+
+Gleam is in no way the optimal language for this project as a single user game.
+However if I scale it to a multi-player game, then it may be a good fit due to Erlang's ability to handle tons of concurrent users.
 
 ## Gameplay
 
