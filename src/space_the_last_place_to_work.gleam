@@ -196,6 +196,27 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
     <> "/"
     <> int.to_string(ship.max_cargo_holds),
   )
+  // Show cargo items indented (only those with quantity > 0)
+  case list.filter(cargo, fn(pair) { pair.1 > 0 }) {
+    [] -> io.println("  (Empty)")
+    non_empty_cargo -> {
+      let _ =
+        list.each(non_empty_cargo, fn(pair) {
+          let name = case pair.0 {
+            trade_goods.Protein(n, _, _) -> n
+            trade_goods.Hydro(n, _, _) -> n
+            trade_goods.Fuel(n, _, _) -> n
+            trade_goods.SpareParts(n, _, _) -> n
+            trade_goods.Mineral(n, _, _) -> n
+            trade_goods.Habitat(n, _, _) -> n
+            trade_goods.Weapons(n, _, _) -> n
+            trade_goods.Shields(n, _, _) -> n
+          }
+          let qty = pair.1
+          io.println("  - " <> name <> ": " <> int.to_string(qty))
+        })
+    }
+  }
   io.println(
     "Current speed: "
     <> int.to_string(current_speed)
@@ -203,17 +224,18 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
     <> int.to_string(max_speed),
   )
   // Check if player is at a planet with a starport
-  let current_planet =
+  let current_planet_result =
     list.find(universe.planets, fn(p) { p.position.x == x && p.position.y == y })
 
   io.println("\nCommands:")
   io.println("  M - Move")
+  io.println("  F - FTL Travel (to any planet with FTL lane)")
   io.println("  I - Show ship info")
   io.println("  T# - Set speed (1-" <> int.to_string(max_speed) <> ")")
   io.println("  L - Show location map")
 
   // Show system info and trade options if at a planet
-  case current_planet {
+  case current_planet_result {
     Ok(planet) ->
       case planet.has_starport {
         True -> io.println("  B - Trade at " <> planet.name <> "'s starport")
@@ -234,6 +256,114 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
     False -> {
       // Handle commands
       case command {
+        // FTL Travel
+        "F" -> {
+          case current_planet_result {
+            Ok(planet) -> {
+              let destinations = get_ftl_destinations(planet, universe)
+              case destinations {
+                [] -> {
+                  io.println(
+                    "\nNo FTL travel destinations available from this location.",
+                  )
+                  io.println(
+                    "You must be at or near a planet with an FTL lane to use FTL travel.",
+                  )
+                  Continue(player, universe)
+                }
+                _ -> {
+                  // Print available destinations
+                  io.println("\nAvailable FTL destinations:")
+                  let _ =
+                    list.index_fold(destinations, 1, fn(i, dest, _) {
+                      io.println(
+                        string.concat([
+                          int.to_string(i),
+                          ". ",
+                          dest.name,
+                          case dest.has_starport {
+                            True -> " (Starbase) "
+                            False -> ""
+                          },
+                          " (",
+                          int.to_string(dest.position.x),
+                          ":",
+                          int.to_string(dest.position.y),
+                          ")",
+                        ]),
+                      )
+                      i + 1
+                    })
+
+                  // Get user selection
+                  io.print(
+                    "\nEnter destination number (or press Enter to cancel): ",
+                  )
+                  let input = utils.get_trimmed_line("")
+
+                  case input {
+                    "" -> {
+                      io.println("FTL travel cancelled.")
+                      Continue(player, universe)
+                    }
+                    _ -> {
+                      case int.parse(input) {
+                        Ok(choice) -> {
+                          // Find the selected destination by dropping the first (choice-1) elements
+                          let remaining = list.drop(destinations, choice - 1)
+                          case list.first(remaining) {
+                            Ok(dest) -> {
+                              io.println(
+                                "\nInitiating FTL jump to "
+                                <> dest.name
+                                <> "...",
+                              )
+
+                              // Move the player to the destination planet
+                              case
+                                player.move_ship(
+                                  player,
+                                  dest.position.x,
+                                  dest.position.y,
+                                  universe,
+                                )
+                              {
+                                Ok(updated_player) -> {
+                                  io.println("Arrived at " <> dest.name <> "!")
+                                  Continue(updated_player, universe)
+                                }
+                                Error(e) -> {
+                                  io.println("FTL travel failed: " <> e)
+                                  Continue(player, universe)
+                                }
+                              }
+                            }
+                            Error(_) -> {
+                              io.println(
+                                "Invalid selection. FTL travel cancelled.",
+                              )
+                              Continue(player, universe)
+                            }
+                          }
+                        }
+                        Error(_) -> {
+                          io.println("Invalid input. Please enter a number.")
+                          Continue(player, universe)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            Error(_) -> {
+              io.println(
+                "\nYou must be at or near a planet with an FTL lane to use FTL travel.",
+              )
+              Continue(player, universe)
+            }
+          }
+        }
         // Show ship info
         "I" -> {
           let ship_info = ship.to_string(player.ship)
@@ -252,7 +382,7 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
         }
         // Trade at starport
         "B" -> {
-          case current_planet {
+          case current_planet_result {
             Ok(planet) -> {
               case planet.has_starport {
                 True -> {
@@ -358,7 +488,7 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
         }
         // Show system information
         "S" -> {
-          case current_planet {
+          case current_planet_result {
             Ok(planet) -> {
               io.println("\n=== " <> planet.name <> " ===")
               io.println(
@@ -503,6 +633,19 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
       }
     }
   }
+}
+
+// Find all planets with FTL lanes that the player can travel to
+fn get_ftl_destinations(
+  current_planet: universe.Planet,
+  universe: universe.Universe,
+) -> List(universe.Planet) {
+  list.filter(universe.planets, fn(planet) {
+    let is_same_planet =
+      planet.position.x == current_planet.position.x
+      && planet.position.y == current_planet.position.y
+    planet.has_ftl_lane && !is_same_planet
+  })
 }
 
 // Display a 5x10 map showing the player's location and nearby objects

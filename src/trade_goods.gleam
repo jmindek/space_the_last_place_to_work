@@ -37,3 +37,45 @@ pub fn generate_trade_goods() -> List(TradeGoods) {
     Shields("Shields", random_price(1000, 10_000), int.random(500)),
   ]
 }
+
+// Get the name of a trade good
+pub fn get_name(good: TradeGoods) -> String {
+  case good {
+    Protein(name, _, _) -> name
+    Hydro(name, _, _) -> name
+    Fuel(name, _, _) -> name
+    SpareParts(name, _, _) -> name
+    Mineral(name, _, _) -> name
+    Habitat(name, _, _) -> name
+    Weapons(name, _, _) -> name
+    Shields(name, _, _) -> name
+  }
+}
+
+// Get the price of a trade good
+pub fn get_price(good: TradeGoods) -> Int {
+  case good {
+    Protein(_, price, _) -> price
+    Hydro(_, price, _) -> price
+    Fuel(_, price, _) -> price
+    SpareParts(_, price, _) -> price
+    Mineral(_, price, _) -> price
+    Habitat(_, price, _) -> price
+    Weapons(_, price, _) -> price
+    Shields(_, price, _) -> price
+  }
+}
+
+// Get the quantity of a trade good
+pub fn get_quantity(good: TradeGoods) -> Int {
+  case good {
+    Protein(_, _, qty) -> qty
+    Hydro(_, _, qty) -> qty
+    Fuel(_, _, qty) -> qty
+    SpareParts(_, _, qty) -> qty
+    Mineral(_, _, qty) -> qty
+    Habitat(_, _, qty) -> qty
+    Weapons(_, _, qty) -> qty
+    Shields(_, _, qty) -> qty
+  }
+}
