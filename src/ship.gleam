@@ -35,6 +35,33 @@ pub type Ship {
   )
 }
 
+// Move the ship to new coordinates in a continuous universe
+// If coordinates exceed bounds, they wrap around to the opposite side
+pub fn move_ship(ship: Ship, x: Int, y: Int, universe_size: Int) -> Ship {
+  // Calculate wrapped coordinates using modulo arithmetic
+  let wrap = fn(coord: Int, size: Int) -> Int {
+    case coord {
+      n if n >= 0 -> n % size
+      n -> size + n % size
+    }
+  }
+
+  let wrapped_x = wrap(x, universe_size)
+  let wrapped_y = wrap(y, universe_size)
+
+  Ship(..ship, location: #(wrapped_x, wrapped_y))
+}
+
+// Update the ship's speed
+pub fn set_speed(ship: Ship, new_speed: Int) -> Ship {
+  let clamped_speed = case new_speed {
+    s if s < 0 -> 0
+    s if s > 10 -> 10
+    s -> s
+  }
+  Ship(..ship, speed: clamped_speed)
+}
+
 // Get the crew size for a ship class
 fn get_crew_size(class: ShipClass) -> Int {
   case class {
@@ -166,18 +193,6 @@ pub fn new_ship(class: ShipClass, location: #(Int, Int)) -> Ship {
     // Start with no passengers
     max_passenger_holds: max_passengers,
   )
-}
-
-// Change the ship's speed (clamped between 0 and 10)
-pub fn set_speed(ship: Ship, new_speed: Int) -> Ship {
-  let clamped_speed = case new_speed {
-    s if s < 0 -> 0
-    s if s > 10 -> 10
-    s -> s
-  }
-
-  let Ship(..) = ship
-  Ship(..ship, speed: clamped_speed)
 }
 
 // Move the ship to a new location
