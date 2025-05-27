@@ -639,7 +639,7 @@ pub fn sell_cargo(
                           // Starport rejects the offer
                           case starport_has_item {
                             True -> {
-                              // Only apply greed tax if the price is too high (>200% of base price)
+                              // Check if price is too high (>200% of base price)
                               case price_ratio_percent > 200 {
                                 True -> {
                                   // Apply greed tax for excessive price
