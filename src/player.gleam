@@ -34,40 +34,11 @@ fn validate_name(name: String) -> Result(String, String) {
   }
 }
 
-// Helper function to create a new ship with default values
-fn new_ship(class: ship.ShipClass) -> ship.Ship {
-  let max_cargo = ship.get_max_cargo_holds(class)
-  let max_passengers = ship.get_max_passenger_holds(class)
-
-  ship.Ship(
-    location: #(0, 0),
-    speed: 1,
-    max_speed: 10,
-    class: class,
-    crew_size: 4,
-    // Default crew size
-    fuel_units: 100,
-    max_fuel_units: 100,
-    shields: 0,
-    max_shields: 10,
-    // Default max shields
-    weapons: 0,
-    max_weapons: 5,
-    // Default max weapons
-    cargo_holds: 0,
-    // Start with empty cargo
-    max_cargo_holds: max_cargo,
-    passenger_holds: 0,
-    // Start with no passengers
-    max_passenger_holds: max_passengers,
-  )
-}
-
-// Create a new player with a name and ship
+// Create a new player with a name and ship class
 pub fn new(name: String, ship_class: ship.ShipClass) -> Result(Player, String) {
   case validate_name(name) {
     Ok(valid_name) -> {
-      let player_ship = new_ship(ship_class)
+      let player_ship = ship.new_ship(ship_class, #(0, 0))
       Ok(Player(
         name: valid_name,
         ship: player_ship,
@@ -121,18 +92,7 @@ pub fn move_ship(
   y: Int,
   universe: universe.Universe,
 ) -> Result(Player, String) {
-  // Calculate wrapped coordinates using modulo arithmetic
-  let wrap = fn(coord: Int, size: Int) -> Int {
-    case coord {
-      n if n >= 0 -> n % size
-      n -> size + n % size
-    }
-  }
-
-  let wrapped_x = wrap(x, universe.size)
-  let wrapped_y = wrap(y, universe.size)
-
-  let updated_ship = ship.Ship(..player.ship, location: #(wrapped_x, wrapped_y))
+  let updated_ship = ship.move_ship(player.ship, x, y, universe.size)
   Ok(Player(..player, ship: updated_ship))
 }
 
