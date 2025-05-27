@@ -277,14 +277,26 @@ fn buy_goods(
       Ok(player)
     }
     Ok(item_index) -> {
-      // Get quantity
-      io.print("Enter quantity to buy (or press Enter for 1): ")
+      // Get the selected good and its price
+      let #(selected_good, price_per_unit) = 
+        case list.drop(planet.trade_goods, item_index - 1) {
+          [good, ..] -> #(good, trade_goods.get_price(good))
+          _ -> #(trade_goods.Protein("", 0, 0), 0)  // Default values if item not found
+        }
+      
+      // Calculate maximum quantity based on available quantity and player's credits
+      let available_qty = trade_goods.get_quantity(selected_good)
+      let max_affordable = player.credits / price_per_unit  // Integer division is fine here
+      let max_qty = int.min(available_qty, max_affordable)
+      
+      // Get quantity from user
+      io.print("Enter quantity to buy (or press Enter for max): ")
       let qty_input = utils.get_trimmed_line("")
       let quantity = case qty_input {
-        "" -> 1
+        "" -> max_qty  // Use max affordable quantity when Enter is pressed
         _ ->
           case int.parse(qty_input) {
-            Ok(q) -> q
+            Ok(q) -> int.min(q, max_qty)  // Don't allow more than max affordable
             _ -> 1
           }
       }
@@ -516,8 +528,21 @@ pub fn sell_cargo(
                   Ok(player)
                 }
                 False -> {
-                  // Get asking price
-                  io.print("Enter your asking price per unit: ")
+                  // Get item name for lookup
+                  let item_name = trade_goods.get_name(item)
+                  
+                  // Find the current market price
+                  let market_price = 
+                    case list.find(planet.trade_goods, fn(good) {
+                      trade_goods.get_name(good) == item_name
+                    }) {
+                      Ok(found_good) -> trade_goods.get_price(found_good)
+                      Error(_) -> trade_goods.get_price(item)  // Fallback to item's price if not found
+                    }
+                  
+                  io.print("Enter your asking price per unit (current: ")
+                  io.print(int.to_string(market_price))
+                  io.print("): ")
                   let price_input = utils.get_trimmed_line("")
 
                   case int.parse(price_input) {
@@ -598,66 +623,64 @@ pub fn sell_cargo(
                       // Process the sale
                       case accepted {
                         True -> {
-                          // Calculate total price
-                          let total_price = price_per_unit * quantity
-
-                          // Update player's credits and cargo
-                          let new_credits = player.credits + total_price
-
-                          // Remove sold items from cargo
-                          let updated_cargo =
-                            list.map(player.cargo, fn(pair) {
-                              let #(i, q) = pair
-                              case i == item {
-                                True -> #(i, q - quantity)
-                                False -> pair
-                              }
-                            })
-                            |> list.filter(fn(pair) {
-                              let #(_, q) = pair
-                              q > 0
-                            })
-
-                          // Create and return the updated player
-                          let updated_player =
-                            player.Player(
-                              name: player.name,
-                              ship: player.ship,
-                              homeworld: player.homeworld,
-                              credits: new_credits,
-                              cargo: updated_cargo,
-                            )
-
-                          io.println(
-                            "\nOffer accepted! You've earned "
-                            <> int.to_string(total_price)
-                            <> " credits.",
-                          )
-                          Ok(updated_player)
+                          // Check if price is too high (>200% of base price) and apply greed tax
+                          case price_ratio_percent > 200 && starport_has_item {
+                            True -> {
+                              // Apply greed tax for excessive price
+                              let taxed_player =
+                                handle_offer_response(
+                                  price_ratio_percent,
+                                  price_per_unit,
+                                  quantity,
+                                  player,
+                                )
+                              Ok(taxed_player)
+                            }
+                            False -> {
+                              // Standard successful transaction
+                              let total_price = price_per_unit * quantity
+                              
+                              // Update player's credits and cargo
+                              let updated_cargo =
+                                list.map(player.cargo, fn(p) {
+                                  case p {
+                                    #(i, q) if i == item -> #(i, q - quantity)
+                                    x -> x
+                                  }
+                                })
+                                |> list.filter(fn(x) { x.1 > 0 })
+                              
+                              let updated_player = player.Player(
+                                name: player.name,
+                                ship: player.ship,
+                                homeworld: player.homeworld,
+                                credits: player.credits + total_price,
+                                cargo: updated_cargo,
+                              )
+                              
+                              io.println(
+                                "\nOffer accepted! You've earned "
+                                <> int.to_string(total_price)
+                                <> " credits.",
+                              )
+                              Ok(updated_player)
+                            }
+                          }
                         }
                         False -> {
                           // Starport rejects the offer
                           case starport_has_item {
                             True -> {
-                              // Check if price is too high (>200% of base price)
+                              // Standard rejection for reasonable but not accepted offers
                               case price_ratio_percent > 200 {
                                 True -> {
-                                  // Apply greed tax for excessive price
-                                  let taxed_player =
-                                    handle_offer_response(
-                                      price_ratio_percent,
-                                      price_per_unit,
-                                      quantity,
-                                      player,
-                                    )
-                                  Ok(taxed_player)
+                                  io.println("No. We have anti-greed taxes here. Be careful or we will levy one upon you.")
                                 }
                                 False -> {
-                                  // Standard rejection for reasonable but not accepted offers
                                   io.println("No thank you.")
-                                  Ok(player)
                                 }
                               }
+                              Ok(player)
                             }
                             False -> {
                               io.println("We're not interested in that price.")
