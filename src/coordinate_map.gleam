@@ -1,7 +1,7 @@
-import gleam/io
 import gleam/int
-import gleam/string
+import gleam/io
 import gleam/list
+import gleam/string
 
 import player
 import universe
@@ -9,7 +9,8 @@ import universe
 // Display a minimap showing the player's current location and nearby points of interest
 pub fn show_minimap(player: player.Player, universe: universe.Universe) {
   let #(x, y) = player.ship.location
-  let map_size = 10  // 10x10 grid around the player
+  let map_size = 10
+  // 10x10 grid around the player
 
   io.println(
     "\n=== Minimap (You are at "
@@ -18,9 +19,7 @@ pub fn show_minimap(player: player.Player, universe: universe.Universe) {
     <> int.to_string(y)
     <> ") ===",
   )
-  io.println(
-    "  (.) Empty space  (P) Planet  (S) Starport  (Y) You",
-  )
+  io.println("  (.) Empty space  (P) Planet  (S) Starport  (Y) You")
 
   // Calculate map bounds (ensure we have at least 1x1 map)
   let map_size_int = int.max(1, int.min(10, map_size))
@@ -74,11 +73,9 @@ pub fn show_minimap(player: player.Player, universe: universe.Universe) {
       }
     })
 
-
     // Print right border and row number
     io.println(" | " <> int.to_string(map_y))
   })
-
 
   // Print bottom border
   io.print("   +")

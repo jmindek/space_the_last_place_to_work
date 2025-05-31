@@ -1,18 +1,18 @@
-import gleam/string
-import gleam/io
+import coordinate_map
+import gleam/float
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option
 import gleam/result
-import gleam/float
+import gleam/string
 import player
 import ship
-import universe
-import utils
-import coordinate_map
 import title_screen
 import trade
 import trade_goods
+import universe
+import utils
 
 // Game state type to represent the game's state
 pub type GameState {
@@ -472,7 +472,7 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
                                     "\nMoved to "
                                     <> int.to_string(x)
                                     <> ":"
-                                    <> int.to_string(y)
+                                    <> int.to_string(y),
                                   )
                                   Continue(updated_player, universe)
                                 }
@@ -484,18 +484,20 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
                             False -> {
                               case distance == 0 {
                                 True -> {
-                                  io.println("Error: You're already at that location!")
+                                  io.println(
+                                    "Error: You're already at that location!",
+                                  )
                                   Continue(player, universe)
                                 }
                                 False -> {
                                   io.println(
                                     "Error: Cannot move that far! Maximum distance is "
-                                    <> int.to_string(current_speed)
+                                    <> int.to_string(current_speed),
                                   )
                                   io.println(
                                     "You tried to move "
                                     <> int.to_string(distance)
-                                    <> " units"
+                                    <> " units",
                                   )
                                   Continue(player, universe)
                                 }
@@ -517,15 +519,21 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
                 }
                 // Handle cases with wrong number of coordinates
                 [] -> {
-                  io.println("\nError: Please enter coordinates in the format X:Y")
+                  io.println(
+                    "\nError: Please enter coordinates in the format X:Y",
+                  )
                   Continue(player, universe)
                 }
                 [_] -> {
-                  io.println("\nError: Please enter both X and Y coordinates separated by a colon (X:Y)")
+                  io.println(
+                    "\nError: Please enter both X and Y coordinates separated by a colon (X:Y)",
+                  )
                   Continue(player, universe)
                 }
                 _ -> {
-                  io.println("\nError: Too many coordinates. Please enter exactly X:Y")
+                  io.println(
+                    "\nError: Too many coordinates. Please enter exactly X:Y",
+                  )
                   Continue(player, universe)
                 }
               }
@@ -848,28 +856,20 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
   }
 }
 
-
 // Find all planets with FTL lanes that the player can travel to
 fn find_ftl_destinations(
   player: player.Player,
   universe: universe.Universe,
 ) -> List(universe.Planet) {
   let #(x, y) = player.ship.location
-  
-  list.filter(
-    universe.planets,
-    fn(planet) {
-      planet.has_ftl_lane &&
-      { planet.position.x != x || planet.position.y != y }
-    }
-  )
+
+  list.filter(universe.planets, fn(planet) {
+    planet.has_ftl_lane && { planet.position.x != x || planet.position.y != y }
+  })
 }
 
 // Display a map showing the player's location and nearby objects
-fn show_location_map(
-  player: player.Player,
-  universe: universe.Universe,
-) -> Nil {
+fn show_location_map(player: player.Player, universe: universe.Universe) -> Nil {
   let #(player_x, player_y) = player.ship.location
 
   // Calculate the visible area (10x5 grid centered on player)
