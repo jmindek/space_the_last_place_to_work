@@ -1,3 +1,4 @@
+import coordinate_map
 import gleam/float
 import gleam/int
 import gleam/io
@@ -233,9 +234,7 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
 
   io.println("\nCommands:")
   io.println("  M - Move")
-  io.println("  F - FTL Travel (to any planet with FTL lane)")
   io.println("  I - Show ship info")
-  io.println("  T# - Set speed (1-" <> int.to_string(max_speed) <> ")")
   io.println("  L - Show location map")
 
   // Show system info and trade options if at a planet
@@ -263,8 +262,8 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
         // FTL Travel
         "F" -> {
           case current_planet_result {
-            Ok(planet) -> {
-              let destinations = get_ftl_destinations(planet, universe)
+            Ok(_) -> {
+              let destinations = find_ftl_destinations(player, universe)
               case destinations {
                 [] -> {
                   io.println(
@@ -379,7 +378,7 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
         }
         // Show location map
         "L" -> {
-          show_location_map(ship.location, universe)
+          coordinate_map.show_minimap(player, universe)
           io.println("\nPress Enter to continue...")
           let _ = utils.get_line("")
           Continue(player, universe)
@@ -417,76 +416,294 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
         }
         // Quit command
         "Q" -> Quit
-        // Move command
+        // Movement command section
         "M" -> {
-          io.println("Enter target coordinates (X:Y):")
-          io.print("> ")
+          // Show minimap
+          coordinate_map.show_minimap(player, universe)
 
-          // Get the input and split by colon
+          // Show menu options
+          io.println(
+            "\n  (C)oordinates - Enter specific coordinates to move to",
+          )
+          io.println("  (F)TL - Show FTL travel options")
+          io.println(
+            "  (T)# - Set speed to # (1-"
+            <> int.to_string(player.ship.max_speed)
+            <> ")",
+          )
+          io.println("  (H)elp - Show help for movement commands")
+          io.println("  (Q)uit - Return to main menu")
+          io.print("\n> ")
+
+          // Get user input
           let input = string.trim(utils.get_line(""))
 
-          // Split input on colon
-          case string.split(input, ":") {
-            [x_str, y_str] -> {
-              let x_parsed = int.parse(string.trim(x_str))
-              let y_parsed = int.parse(string.trim(y_str))
+          // Handle menu selection
+          case string.uppercase(input) {
+            // Coordinates input
+            "C" -> {
+              io.println("\nEnter target coordinates (X:Y):")
+              io.print("> ")
+              let coord_input = string.trim(utils.get_line(""))
 
-              case x_parsed, y_parsed {
-                Ok(x), Ok(y) -> {
-                  let #(current_x, current_y) = player.ship.location
-                  let dx = int.absolute_value(x - current_x)
-                  let dy = int.absolute_value(y - current_y)
-                  // Using Manhattan distance (sum of x and y differences)
-                  let distance = dx + dy
+              // Handle coordinate input with all possible patterns
+              case string.split(coord_input, ":") {
+                // Handle case with exactly two coordinates
+                [x_str, y_str] -> {
+                  let x_parsed = int.parse(string.trim(x_str))
+                  let y_parsed = int.parse(string.trim(y_str))
 
-                  case distance <= current_speed && distance > 0 {
-                    True ->
-                      case player.move_ship(player, x, y, universe) {
-                        Ok(updated_player) -> {
-                          io.println(
-                            "Moved to "
-                            <> int.to_string(x)
-                            <> ":"
-                            <> int.to_string(y),
-                          )
-                          Continue(updated_player, universe)
+                  // Handle both x and y parsing results
+                  case x_parsed {
+                    Ok(x) -> {
+                      case y_parsed {
+                        Ok(y) -> {
+                          let #(current_x, current_y) = player.ship.location
+                          let dx = int.absolute_value(x - current_x)
+                          let dy = int.absolute_value(y - current_y)
+                          // Using Manhattan distance (sum of x and y differences)
+                          let distance = dx + dy
+
+                          case distance <= current_speed && distance > 0 {
+                            True ->
+                              case player.move_ship(player, x, y, universe) {
+                                Ok(updated_player) -> {
+                                  io.println(
+                                    "\nMoved to "
+                                    <> int.to_string(x)
+                                    <> ":"
+                                    <> int.to_string(y),
+                                  )
+                                  Continue(updated_player, universe)
+                                }
+                                Error(e) -> {
+                                  io.println("\nError: " <> e)
+                                  Continue(player, universe)
+                                }
+                              }
+                            False -> {
+                              case distance == 0 {
+                                True -> {
+                                  io.println(
+                                    "Error: You're already at that location!",
+                                  )
+                                  Continue(player, universe)
+                                }
+                                False -> {
+                                  io.println(
+                                    "Error: Cannot move that far! Maximum distance is "
+                                    <> int.to_string(current_speed),
+                                  )
+                                  io.println(
+                                    "You tried to move "
+                                    <> int.to_string(distance)
+                                    <> " units",
+                                  )
+                                  Continue(player, universe)
+                                }
+                              }
+                            }
+                          }
                         }
-                        Error(e) -> {
-                          io.println("Error: " <> e)
+                        Error(_) -> {
+                          io.println("\nError: Invalid Y coordinate")
                           Continue(player, universe)
                         }
                       }
-                    False -> {
-                      case distance == 0 {
-                        True -> {
-                          io.println("Error: You're already at that location!")
+                    }
+                    Error(_) -> {
+                      io.println("\nError: Invalid X coordinate")
+                      Continue(player, universe)
+                    }
+                  }
+                }
+                // Handle cases with wrong number of coordinates
+                [] -> {
+                  io.println(
+                    "\nError: Please enter coordinates in the format X:Y",
+                  )
+                  Continue(player, universe)
+                }
+                [_] -> {
+                  io.println(
+                    "\nError: Please enter both X and Y coordinates separated by a colon (X:Y)",
+                  )
+                  Continue(player, universe)
+                }
+                _ -> {
+                  io.println(
+                    "\nError: Too many coordinates. Please enter exactly X:Y",
+                  )
+                  Continue(player, universe)
+                }
+              }
+            }
+            "F" -> {
+              // FTL travel
+              case current_planet_result {
+                Ok(planet) -> {
+                  let destinations = find_ftl_destinations(player, universe)
+                  case destinations {
+                    [] -> {
+                      io.println(
+                        "\nNo FTL travel destinations available from this location.",
+                      )
+                      Continue(player, universe)
+                    }
+                    _ -> {
+                      // Show FTL destinations
+                      io.println("\nAvailable FTL destinations:")
+                      let _ =
+                        list.index_fold(destinations, 1, fn(i, dest, _) {
+                          io.println(
+                            string.concat([
+                              int.to_string(i),
+                              ". ",
+                              dest.name,
+                              case dest.has_starport {
+                                True -> " (Starbase) "
+                                False -> ""
+                              },
+                              " (",
+                              int.to_string(dest.position.x),
+                              ":",
+                              int.to_string(dest.position.y),
+                              ")",
+                            ]),
+                          )
+                          i + 1
+                        })
+
+                      // Get user selection
+                      io.print(
+                        "\nEnter destination number (or press Enter to cancel): ",
+                      )
+                      let input = utils.get_trimmed_line("")
+
+                      case input {
+                        "" -> {
+                          io.println("FTL travel cancelled.")
                           Continue(player, universe)
                         }
-                        False -> {
-                          io.println(
-                            "Error: Cannot move that far! Maximum distance is "
-                            <> int.to_string(current_speed),
-                          )
-                          io.println(
-                            "You tried to move "
-                            <> int.to_string(distance)
-                            <> " units",
-                          )
-                          Continue(player, universe)
+                        _ -> {
+                          case int.parse(input) {
+                            Ok(choice) -> {
+                              // Find the selected destination by dropping the first (choice-1) elements
+                              let remaining =
+                                list.drop(destinations, choice - 1)
+                              case list.first(remaining) {
+                                Ok(dest) -> {
+                                  io.println(
+                                    "\nInitiating FTL jump to "
+                                    <> dest.name
+                                    <> "...",
+                                  )
+                                  // Move the player to the destination planet
+                                  case
+                                    player.move_ship(
+                                      player,
+                                      dest.position.x,
+                                      dest.position.y,
+                                      universe,
+                                    )
+                                  {
+                                    Ok(updated_player) -> {
+                                      io.println(
+                                        "Arrived at " <> dest.name <> "!",
+                                      )
+                                      Continue(updated_player, universe)
+                                    }
+                                    Error(e) -> {
+                                      io.println("FTL travel failed: " <> e)
+                                      Continue(player, universe)
+                                    }
+                                  }
+                                }
+                                Error(_) -> {
+                                  io.println(
+                                    "Invalid selection. FTL travel cancelled.",
+                                  )
+                                  Continue(player, universe)
+                                }
+                              }
+                            }
+                            Error(_) -> {
+                              io.println(
+                                "Invalid input. Please enter a number.",
+                              )
+                              Continue(player, universe)
+                            }
+                          }
                         }
                       }
                     }
                   }
                 }
-                _, _ -> {
-                  io.println("Invalid coordinates")
+                Error(_) -> {
+                  io.println(
+                    "\nFTL travel is only available from planets with FTL lanes.",
+                  )
                   Continue(player, universe)
                 }
               }
             }
-            _ -> {
-              io.println("Invalid input format. Please use X:Y")
+            "H" -> {
+              // Show help
+              io.println("\n=== Movement Help ===")
+              io.println("C - Enter specific coordinates to move to")
+              io.println("F - Show FTL travel options")
+              io.println(
+                "T# - Set speed to # (1-"
+                <> int.to_string(player.ship.max_speed)
+                <> ")",
+              )
+              io.println("  Example: 'T3' sets speed to 3")
+              io.println("Q - Return to main menu")
+              io.println("\nPress Enter to continue...")
+              let _ = utils.get_line("")
               Continue(player, universe)
+            }
+            // Handle Q to quit
+            "Q" -> Continue(player, universe)
+            // Handle empty input
+            "" -> Continue(player, universe)
+            // Handle T# command (speed change)
+            _ -> {
+              case string.slice(input, 0, 1) {
+                "T" | "t" -> {
+                  let speed_str = string.drop_left(input, 1)
+                  case int.parse(speed_str) {
+                    Ok(speed) -> {
+                      case speed >= 1 && speed <= player.ship.max_speed {
+                        True -> {
+                          let updated_ship = ship.set_speed(player.ship, speed)
+                          let updated_player =
+                            player.Player(..player, ship: updated_ship)
+                          io.println("\nSpeed set to " <> int.to_string(speed))
+                          Continue(updated_player, universe)
+                        }
+                        False -> {
+                          io.println(
+                            "\nInvalid speed. Must be between 1 and "
+                            <> int.to_string(player.ship.max_speed),
+                          )
+                          Continue(player, universe)
+                        }
+                      }
+                    }
+                    Error(_) -> {
+                      io.println(
+                        "\nInvalid speed command. Use T# where # is a number.",
+                      )
+                      Continue(player, universe)
+                    }
+                  }
+                }
+                _ -> {
+                  io.println("\nUnknown command. Type 'H' for help.")
+                  Continue(player, universe)
+                }
+              }
             }
           }
         }
@@ -640,24 +857,20 @@ fn player_turn(universe: universe.Universe, player: player.Player) -> GameState 
 }
 
 // Find all planets with FTL lanes that the player can travel to
-fn get_ftl_destinations(
-  current_planet: universe.Planet,
+fn find_ftl_destinations(
+  player: player.Player,
   universe: universe.Universe,
 ) -> List(universe.Planet) {
+  let #(x, y) = player.ship.location
+
   list.filter(universe.planets, fn(planet) {
-    let is_same_planet =
-      planet.position.x == current_planet.position.x
-      && planet.position.y == current_planet.position.y
-    planet.has_ftl_lane && !is_same_planet
+    planet.has_ftl_lane && { planet.position.x != x || planet.position.y != y }
   })
 }
 
-// Display a 5x10 map showing the player's location and nearby objects
-fn show_location_map(
-  player_pos: #(Int, Int),
-  universe: universe.Universe,
-) -> Nil {
-  let #(player_x, player_y) = player_pos
+// Display a map showing the player's location and nearby objects
+fn show_location_map(player: player.Player, universe: universe.Universe) -> Nil {
+  let #(player_x, player_y) = player.ship.location
 
   // Calculate the visible area (10x5 grid centered on player)
   let start_x = player_x - 4
