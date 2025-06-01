@@ -2,7 +2,6 @@ import gleam/int
 import gleam/io
 import gleam/list
 import gleam/string
-
 import player
 import universe
 
@@ -92,4 +91,71 @@ pub fn show_minimap(player: player.Player, universe: universe.Universe) {
     io.print(label <> spaces)
   })
   io.println("")
+}
+
+// Display a map showing the player's location and nearby objects
+pub fn show_location_map(
+  player: player.Player,
+  universe: universe.Universe,
+) -> Nil {
+  let #(player_x, player_y) = player.ship.location
+
+  // Calculate the visible area (10x5 grid centered on player)
+  let start_x = player_x - 4
+  // Show 4 columns to the left
+  let end_x = player_x + 5
+  // and 5 columns to the right (10 total)
+  let start_y = player_y - 2
+  // Show 2 rows above
+  let end_y = player_y + 2
+  // and 2 rows below (5 total)
+  // Print header
+  io.println("\n      " <> string.repeat("-", 19))
+  io.println("     |0 1 2 3 4 5 6 7 8 9|")
+  io.println("     +------------------+")
+
+  // Print each row
+  list.each(list.range(start_y, end_y), fn(y) {
+    // Print row number with padding for alignment
+    let y_str = int.to_string(y)
+    let padding = case string.length(y_str) {
+      1 -> "  "
+      // Two spaces for single-digit numbers
+      2 -> " "
+      // One space for two-digit numbers
+      _ -> ""
+      // No space for three-digit numbers
+    }
+    io.print(padding <> y_str <> " |")
+
+    // Print each column in the row
+    list.each(list.range(start_x, end_x), fn(x) {
+      // Check if this is the player's position
+      case x == player_x && y == player_y {
+        True -> io.print("* ")
+        False -> {
+          // Check if there's a planet at this position
+          let has_planet =
+            list.any(universe.planets, fn(planet) {
+              planet.position.x == x && planet.position.y == y
+            })
+
+          // Print the appropriate symbol
+          case has_planet {
+            True -> io.print("0 ")
+            False -> io.print(". ")
+          }
+        }
+      }
+    })
+
+    // End of row
+    io.println("|")
+  })
+
+  // Print footer and legend
+  io.println("     +------------------+")
+  io.println("     * = Your ship")
+  io.println("     0 = Planet")
+  io.println("     . = Empty space")
 }
