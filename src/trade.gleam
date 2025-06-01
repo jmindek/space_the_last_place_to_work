@@ -236,16 +236,16 @@ pub fn show_trade_menu(
 
   // Show menu options
   io.println("\nOptions:")
-  io.println("1. Buy")
-  io.println("2. Sell")
-  io.println("0. Back")
-  io.print("\nSelect an option: ")
-  let choice = utils.get_trimmed_line("")
+  io.println("B. Buy")
+  io.println("S. Sell")
+  io.println("Q. Back")
+  io.print("\nSelect an option (B/S/Q): ")
+  let choice = string.lowercase(utils.get_trimmed_line(""))
 
   case choice {
-    "1" -> buy_goods(player, planet)
-    "2" -> sell_cargo(player, planet)
-    "0" -> Ok(player)
+    "b" -> buy_goods(player, planet)
+    "s" -> sell_cargo(player, planet)
+    "q" -> Ok(player)
     _ -> {
       io.println("Invalid choice. Please try again.")
       Ok(player)

@@ -212,14 +212,7 @@ fn npc_turn(
   #(player, universe)
 }
 
-fn environment_turn(
-  universe: universe.Universe,
-  player: player.Player,
-) -> #(player.Player, universe.Universe) {
-  io.println("Environment's turn - updating trade good prices...")
-  // TODO: Implement environment update logic
-  #(player, universe)
-}
+// Environment turn logic is now in the environment_turn module
 
 // Get the current planet the player is at
 fn get_current_planet(
@@ -227,11 +220,14 @@ fn get_current_planet(
   universe: universe.Universe,
 ) -> Result(universe.Planet, String) {
   let player.Player(_, player_ship, _, _, _) = player
+  // player_ship is used in the following line to get the location
   let #(x, y) = player_ship.location
+  let _ = player_ship
+  // Mark as intentionally unused
 
   case
-    list.find(universe.planets, fn(p) {
-      let universe.Position(px, py) = p.position
+    list.find(universe.planets, fn(planet) {
+      let universe.Position(px, py) = planet.position
       px == x && py == y
     })
   {
