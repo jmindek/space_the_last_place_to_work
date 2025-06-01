@@ -8,6 +8,49 @@ import trade_goods
 import universe
 import utils
 
+// Update the price of a single trade good with some random fluctuation
+pub fn fluctuate_price(
+  trade_good: trade_goods.TradeGoods,
+) -> trade_goods.TradeGoods {
+  let fluctuation = int.random(21) - 10
+  // Random number between -10 and +10
+
+  case trade_good {
+    trade_goods.Protein(name, price, quantity) -> {
+      let new_price = int.max(1, price + fluctuation)
+      trade_goods.Protein(name, new_price, quantity)
+    }
+    trade_goods.Hydro(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 10, 1000)
+      trade_goods.Hydro(name, new_price, quantity)
+    }
+    trade_goods.Fuel(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 50, 1000)
+      trade_goods.Fuel(name, new_price, quantity)
+    }
+    trade_goods.SpareParts(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 25, 1000)
+      trade_goods.SpareParts(name, new_price, quantity)
+    }
+    trade_goods.Mineral(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 100, 1000)
+      trade_goods.Mineral(name, new_price, quantity)
+    }
+    trade_goods.Habitat(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 500, 5000)
+      trade_goods.Habitat(name, new_price, quantity)
+    }
+    trade_goods.Weapons(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Weapons(name, new_price, quantity)
+    }
+    trade_goods.Shields(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Shields(name, new_price, quantity)
+    }
+  }
+}
+
 // Handle the offer response based on price ratio
 fn handle_offer_response(
   price_ratio_percent: Int,
@@ -193,16 +236,16 @@ pub fn show_trade_menu(
 
   // Show menu options
   io.println("\nOptions:")
-  io.println("1. Buy")
-  io.println("2. Sell")
-  io.println("0. Back")
-  io.print("\nSelect an option: ")
-  let choice = utils.get_trimmed_line("")
+  io.println("B. Buy")
+  io.println("S. Sell")
+  io.println("Q. Back")
+  io.print("\nSelect an option (B/S/Q): ")
+  let choice = string.lowercase(utils.get_trimmed_line(""))
 
   case choice {
-    "1" -> buy_goods(player, planet)
-    "2" -> sell_cargo(player, planet)
-    "0" -> Ok(player)
+    "b" -> buy_goods(player, planet)
+    "s" -> sell_cargo(player, planet)
+    "q" -> Ok(player)
     _ -> {
       io.println("Invalid choice. Please try again.")
       Ok(player)
@@ -286,23 +329,49 @@ fn buy_goods(
         // Default values if item not found
       }
 
-      // Calculate maximum quantity based on available quantity and player's credits
+      // Calculate maximum quantity based on available quantity, cargo space, and credits
       let available_qty = trade_goods.get_quantity(selected_good)
       let max_affordable = player.credits / price_per_unit
-      // Integer division is fine here
-      let max_qty = int.min(available_qty, max_affordable)
+
+      // Calculate available cargo space
+      let player_cargo_units =
+        list.fold(player.cargo, 0, fn(acc, pair) { acc + pair.1 })
+      let available_cargo_space =
+        player.ship.max_cargo_holds - player_cargo_units
+
+      // The maximum quantity is the minimum of what's available, affordable, and can fit in cargo
+      let max_qty =
+        int.min(available_qty, int.min(max_affordable, available_cargo_space))
 
       // Get quantity from user
-      io.print("Enter quantity to buy (or press Enter for max): ")
+      // Show simple prompt for quantity input
+      io.print("Enter quantity to buy (Enter for max): ")
+
       let qty_input = utils.get_trimmed_line("")
       let quantity = case qty_input {
-        "" -> max_qty
-        // Use max affordable quantity when Enter is pressed
+        "" -> {
+          // Show the max quantity being used when pressing Enter
+          io.println("Using maximum quantity: " <> int.to_string(max_qty))
+          max_qty
+        }
         _ ->
           case int.parse(qty_input) {
-            Ok(q) -> int.min(q, max_qty)
-            // Don't allow more than max affordable
+            Ok(q) -> {
+              // Don't allow more than max possible
+              let clamped_q = int.min(q, max_qty)
+              case q > max_qty {
+                True ->
+                  io.println(
+                    "Reducing quantity to "
+                    <> int.to_string(clamped_q)
+                    <> " (limited by credits/cargo space)",
+                  )
+                _ -> Nil
+              }
+              clamped_q
+            }
             _ -> 1
+            // Default to 1 on invalid input
           }
       }
 
