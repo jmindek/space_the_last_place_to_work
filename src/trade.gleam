@@ -8,6 +8,49 @@ import trade_goods
 import universe
 import utils
 
+// Update the price of a single trade good with some random fluctuation
+pub fn fluctuate_price(
+  trade_good: trade_goods.TradeGoods,
+) -> trade_goods.TradeGoods {
+  let fluctuation = int.random(21) - 10
+  // Random number between -10 and +10
+
+  case trade_good {
+    trade_goods.Protein(name, price, quantity) -> {
+      let new_price = int.max(1, price + fluctuation)
+      trade_goods.Protein(name, new_price, quantity)
+    }
+    trade_goods.Hydro(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 10, 1000)
+      trade_goods.Hydro(name, new_price, quantity)
+    }
+    trade_goods.Fuel(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 50, 1000)
+      trade_goods.Fuel(name, new_price, quantity)
+    }
+    trade_goods.SpareParts(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 25, 1000)
+      trade_goods.SpareParts(name, new_price, quantity)
+    }
+    trade_goods.Mineral(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 100, 1000)
+      trade_goods.Mineral(name, new_price, quantity)
+    }
+    trade_goods.Habitat(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 500, 5000)
+      trade_goods.Habitat(name, new_price, quantity)
+    }
+    trade_goods.Weapons(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Weapons(name, new_price, quantity)
+    }
+    trade_goods.Shields(name, price, quantity) -> {
+      let new_price = int.clamp(price + fluctuation, 1000, 10_000)
+      trade_goods.Shields(name, new_price, quantity)
+    }
+  }
+}
+
 // Handle the offer response based on price ratio
 fn handle_offer_response(
   price_ratio_percent: Int,

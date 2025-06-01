@@ -1,3 +1,4 @@
+import environment_turn
 import game_types
 import gleam/int
 import gleam/io
@@ -17,7 +18,7 @@ pub fn turn(
       let #(next_player, updated_universe) =
         npc_turn(updated_universe, updated_player)
       let #(next_player, updated_universe) =
-        environment_turn(updated_universe, next_player)
+        environment_turn.environment_turn(updated_universe, next_player)
       game_types.Continue(next_player, updated_universe)
     }
     game_types.Quit -> game_types.Quit
