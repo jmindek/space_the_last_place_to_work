@@ -98,11 +98,14 @@ pub fn player_turn(
   io.println("  L - Show location map")
   io.println("  S - Show system information")
 
-  // Show system info and trade options if at a planet
+  // Show system info and trade/refuel options if at a planet
   case current_planet_result {
     Ok(planet) ->
       case planet.has_starport {
-        True -> io.println("  B - Trade at " <> planet.name <> "'s starport")
+        True -> {
+          io.println("  B - Trade at " <> planet.name <> "'s starport")
+          io.println("  F - Refuel ship at " <> planet.name <> "'s starport")
+        }
         False -> io.println("  (No starport in this system)")
       }
     Error(_) -> io.println("  (No planet at current location)")
@@ -122,6 +125,9 @@ pub fn player_turn(
       case command {
         // FTL Travel
         "F" -> handle_ftl_travel(player, universe, current_planet_result)
+
+        // Refuel at starbase
+        "R" -> handle_refuel(player, universe, current_planet_result)
 
         // Show ship info
         "I" -> {
@@ -234,23 +240,35 @@ fn show_ftl_destinations(
           let remaining = list.drop(destinations, choice - 1)
           case list.first(remaining) {
             Ok(dest) -> {
-              io.println("\nInitiating FTL jump to " <> dest.name <> "...")
+              // Move the player to the destination planet first (without consuming fuel for the move)
+              let #(current_x, current_y) = player.ship.location
+              let dx = int.absolute_value(dest.position.x - current_x)
+              let dy = int.absolute_value(dest.position.y - current_y)
+              let distance = dx + dy
 
-              // Move the player to the destination planet
-              case
-                player.move_ship(
-                  player,
-                  dest.position.x,
-                  dest.position.y,
-                  universe,
-                )
-              {
-                Ok(updated_player) -> {
+              // Only consume FTL fuel (250 units)
+              case player.consume_ftl_fuel(player) {
+                Ok(player_with_less_fuel) -> {
+                  io.println("\nInitiating FTL jump to " <> dest.name <> "...")
+                  io.println("Fuel consumed: 250 units")
+
+                  // Now move the player without consuming additional fuel
+                  let updated_ship =
+                    ship.move_ship(
+                      player_with_less_fuel.ship,
+                      // Use the ship with updated fuel
+                      dest.position.x,
+                      dest.position.y,
+                      universe.size,
+                    )
+                  let updated_player =
+                    player.Player(..player_with_less_fuel, ship: updated_ship)
+
                   io.println("Arrived at " <> dest.name <> "!")
                   game_types.Continue(updated_player, universe)
                 }
                 Error(e) -> {
-                  io.println("FTL travel failed: " <> e)
+                  io.println("FTL jump failed: " <> e)
                   game_types.Continue(player, universe)
                 }
               }

@@ -202,14 +202,15 @@ pub fn move_to(ship: Ship, new_location: #(Int, Int)) -> Ship {
 }
 
 // Consume fuel based on distance traveled
+// For regular movement, consumes 1 fuel unit per unit of distance
 pub fn consume_fuel(ship: Ship, distance: Int) -> Result(Ship, String) {
   let Ship(fuel_units: current_fuel, ..) = ship
   let absolute_distance = case distance < 0 {
     True -> -distance
     False -> distance
   }
-  let fuel_cost = absolute_distance * 10
-  // 10 fuel units per unit distance
+  let fuel_cost = absolute_distance * 1
+  // 10 fuel units per unit of distance
 
   case current_fuel - fuel_cost {
     remaining if remaining >= 0 -> Ok(Ship(..ship, fuel_units: remaining))

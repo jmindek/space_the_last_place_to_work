@@ -1,3 +1,4 @@
+import gleam/int
 import gleam/list
 import gleam/option
 import gleam/regex
@@ -92,8 +93,19 @@ pub fn move_ship(
   y: Int,
   universe: universe.Universe,
 ) -> Result(Player, String) {
-  let updated_ship = ship.move_ship(player.ship, x, y, universe.size)
-  Ok(Player(..player, ship: updated_ship))
+  let #(current_x, current_y) = player.ship.location
+  let dx = int.absolute_value(x - current_x)
+  let dy = int.absolute_value(y - current_y)
+  let distance = dx + dy
+
+  case ship.consume_fuel(player.ship, distance) {
+    Ok(ship_with_fuel_consumed) -> {
+      let updated_ship =
+        ship.move_ship(ship_with_fuel_consumed, x, y, universe.size)
+      Ok(Player(..player, ship: updated_ship))
+    }
+    Error(e) -> Error(e)
+  }
 }
 
 // Update the player's ship speed
@@ -102,7 +114,72 @@ pub fn set_ship_speed(player: Player, speed: Int) -> Player {
   Player(..player, ship: updated_ship)
 }
 
+// Consume fuel for FTL travel (250 units per jump)
+pub fn consume_ftl_fuel(player: Player) -> Result(Player, String) {
+  let ftl_fuel_cost = 250
+  let ship = player.ship
+
+  case ship.fuel_units >= ftl_fuel_cost {
+    True -> {
+      // Create a new ship with updated fuel
+      let updated_ship =
+        ship.Ship(
+          location: ship.location,
+          speed: ship.speed,
+          max_speed: ship.max_speed,
+          class: ship.class,
+          crew_size: ship.crew_size,
+          fuel_units: ship.fuel_units - ftl_fuel_cost,
+          max_fuel_units: ship.max_fuel_units,
+          shields: ship.shields,
+          max_shields: ship.max_shields,
+          weapons: ship.weapons,
+          max_weapons: ship.max_weapons,
+          cargo_holds: ship.cargo_holds,
+          max_cargo_holds: ship.max_cargo_holds,
+          passenger_holds: ship.passenger_holds,
+          max_passenger_holds: ship.max_passenger_holds,
+        )
+      Ok(Player(..player, ship: updated_ship))
+    }
+    False -> Error("Not enough fuel for FTL travel (requires 250 units)")
+  }
+}
+
 // Format player information as a string
+// Refuel the player's ship at a starbase
+// Returns updated player and amount of fuel purchased
+pub fn refuel_ship(
+  player: Player,
+  fuel_available: Int,
+  price_per_unit: Int,
+  units_to_buy: Int,
+) -> Result(#(Player, Int), String) {
+  let ship = player.ship
+  let fuel_needed = ship.max_fuel_units - ship.fuel_units
+
+  // Calculate how much fuel we can actually buy
+  let max_affordable = player.credits / price_per_unit
+  let max_purchase = int.min(units_to_buy, fuel_needed)
+  let purchase_amount = int.min(max_purchase, max_affordable)
+  let purchase_amount = int.min(purchase_amount, fuel_available)
+
+  case purchase_amount <= 0 {
+    True ->
+      Error(
+        "Cannot purchase fuel: either no need, no credits, or none available",
+      )
+    False -> {
+      let cost = purchase_amount * price_per_unit
+      let updated_credits = player.credits - cost
+      let updated_ship = ship.refuel(ship, purchase_amount)
+      let updated_player =
+        Player(..player, credits: updated_credits, ship: updated_ship)
+      Ok(#(updated_player, purchase_amount))
+    }
+  }
+}
+
 pub fn to_string(p: Player) -> String {
   let homeworld_str = case p.homeworld {
     option.Some(planet) -> "Homeworld: " <> planet.name
