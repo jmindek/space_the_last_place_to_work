@@ -24,6 +24,131 @@ fn find_ftl_destinations(
   })
 }
 
+// Handle refueling the player's ship at a starbase
+fn handle_refuel(
+  player: player.Player,
+  universe: universe.Universe,
+  current_planet_result: Result(universe.Planet, Nil),
+) -> game_types.GameState {
+  case current_planet_result {
+    Ok(planet) -> {
+      case planet.has_starport {
+        True -> {
+          // Find fuel in the planet's trade goods
+          let fuel_good =
+            list.find(planet.trade_goods, fn(good) {
+              case good {
+                trade_goods.Fuel(_, _, _) -> True
+                _ -> False
+              }
+            })
+
+          case fuel_good {
+            Ok(trade_goods.Fuel(_, price, quantity)) -> {
+              let fuel_needed =
+                player.ship.max_fuel_units - player.ship.fuel_units
+
+              io.println("\n=== Refuel at " <> planet.name <> "'s Starport ===")
+              io.println(
+                "Current fuel: "
+                <> int.to_string(player.ship.fuel_units)
+                <> "/"
+                <> int.to_string(player.ship.max_fuel_units),
+              )
+              io.println(
+                "Fuel available: " <> int.to_string(quantity) <> " units",
+              )
+              io.println(
+                "Price per unit: " <> int.to_string(price) <> " credits",
+              )
+              io.println(
+                "Your credits: " <> int.to_string(player.credits) <> " credits",
+              )
+
+              case fuel_needed <= 0 {
+                True -> {
+                  io.println("Your fuel tanks are already full!")
+                  game_types.Continue(player, universe)
+                }
+                False -> {
+                  io.println(
+                    "\nHow many units would you like to buy? (max "
+                    <> int.to_string(fuel_needed)
+                    <> ", or 'a' for all):",
+                  )
+                  let input = string.trim(utils.get_line("> "))
+
+                  let units_to_buy = case input {
+                    "a" | "A" -> fuel_needed
+                    _ ->
+                      case int.parse(input) {
+                        Ok(n) -> int.min(n, fuel_needed)
+                        _ -> 0
+                      }
+                  }
+
+                  case
+                    player.refuel_ship(player, quantity, price, units_to_buy)
+                  {
+                    Ok(#(updated_player, purchased)) -> {
+                      let cost = purchased * price
+                      io.println(
+                        "\nRefueled with "
+                        <> int.to_string(purchased)
+                        <> " units of fuel for "
+                        <> int.to_string(cost)
+                        <> " credits.",
+                      )
+                      io.println(
+                        "New fuel level: "
+                        <> int.to_string(updated_player.ship.fuel_units)
+                        <> "/"
+                        <> int.to_string(updated_player.ship.max_fuel_units),
+                      )
+                      io.println(
+                        "Remaining credits: "
+                        <> int.to_string(updated_player.credits)
+                        <> " credits",
+                      )
+                      io.println("\nPress Enter to continue...")
+                      let _ = utils.get_line("")
+                      game_types.Continue(updated_player, universe)
+                    }
+                    Error(e) -> {
+                      io.println("\nError: " <> e)
+                      io.println("\nPress Enter to continue...")
+                      let _ = utils.get_line("")
+                      game_types.Continue(player, universe)
+                    }
+                  }
+                }
+              }
+            }
+            _ -> {
+              io.println("\nError: No fuel available at this starport.")
+              io.println("\nPress Enter to continue...")
+              let _ = utils.get_line("")
+              game_types.Continue(player, universe)
+            }
+          }
+        }
+        False -> {
+          io.println("\nError: No starport at this location.")
+          io.println("\nPress Enter to continue...")
+          let _ = utils.get_line("")
+          game_types.Continue(player, universe)
+        }
+      }
+    }
+    Error(_) -> {
+      io.println("\nError: Not at a planet.")
+      io.println("\nPress Enter to continue...")
+      let _ = utils.get_line("")
+      game_types.Continue(player, universe)
+    }
+  }
+}
+
 // Handle the player's turn in the game
 pub fn player_turn(
   universe: universe.Universe,
@@ -104,7 +229,7 @@ pub fn player_turn(
       case planet.has_starport {
         True -> {
           io.println("  B - Trade at " <> planet.name <> "'s starport")
-          io.println("  F - Refuel ship at " <> planet.name <> "'s starport")
+          io.println("  R - Refuel ship at " <> planet.name <> "'s starport")
         }
         False -> io.println("  (No starport in this system)")
       }

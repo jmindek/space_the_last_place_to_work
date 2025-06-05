@@ -364,58 +364,66 @@ pub fn consume_fuel_test() {
     create_test_ship(5, 10, 5, 5)
     |> with_fuel(1000, 5000)
 
-  // Test normal fuel consumption
+  // Test normal fuel consumption (1 unit per distance)
   case ship.consume_fuel(test_ship, 50) {
-    // 50 * 10 = 500 fuel
     Ok(consumed) -> {
       consumed.fuel_units
-      |> should.equal(500)
-      // 1000 - 500 = 500
+      |> should.equal(950)
+      // 1000 - 50
 
       // Test consuming all remaining fuel
-      case ship.consume_fuel(consumed, 50) {
-        // Another 500 fuel
+      case ship.consume_fuel(consumed, 950) {
         Ok(empty) -> {
           empty.fuel_units
           |> should.equal(0)
 
           // Test consuming with not enough fuel
           case ship.consume_fuel(empty, 1) {
-            Ok(_) -> should.fail()
-            Error(_) -> {
+            Ok(_) -> {
+              should.fail()
+              Nil
+            }
+            Error(e) -> {
+              let _ = e
+              // Use the error variable to avoid unused variable warning
               Nil
             }
           }
         }
         Error(_) -> {
+          should.fail()
           Nil
         }
       }
     }
     Error(_) -> {
+      should.fail()
       Nil
     }
   }
 
   // Test zero distance
   case ship.consume_fuel(test_ship, 0) {
-    Ok(no_consumption) -> {
-      no_consumption.fuel_units
+    Ok(unchanged) -> {
+      unchanged.fuel_units
       |> should.equal(1000)
-      // Fuel should remain unchanged
+      // No fuel should be consumed
     }
-    Error(_) -> {
+    _ -> {
+      should.fail()
       Nil
     }
   }
 
-  // Test negative distance (should be treated as 0)
-  case ship.consume_fuel(test_ship, -10) {
-    Ok(consumed) ->
+  // Test negative distance (should consume fuel based on absolute value)
+  case ship.consume_fuel(test_ship, -25) {
+    Ok(consumed) -> {
       consumed.fuel_units
-      |> should.equal(900)
-    // 1000 - (10 * 10) = 900
-    Error(_) -> {
+      |> should.equal(975)
+      // 1000 - 25
+    }
+    _ -> {
+      should.fail()
       Nil
     }
   }
