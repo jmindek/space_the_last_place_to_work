@@ -121,10 +121,11 @@ pub fn consume_ftl_fuel(player: Player) -> Result(Player, String) {
 
   case ship.fuel_units >= ftl_fuel_cost {
     True -> {
-      // Create a new ship with updated fuel
+      // Create a new ship with updated fuel and previous location
       let updated_ship =
         ship.Ship(
           location: ship.location,
+          previous_location: ship.previous_location,
           speed: ship.speed,
           max_speed: ship.max_speed,
           class: ship.class,
@@ -147,39 +148,6 @@ pub fn consume_ftl_fuel(player: Player) -> Result(Player, String) {
 }
 
 // Format player information as a string
-// Refuel the player's ship at a starbase
-// Returns updated player and amount of fuel purchased
-pub fn refuel_ship(
-  player: Player,
-  fuel_available: Int,
-  price_per_unit: Int,
-  units_to_buy: Int,
-) -> Result(#(Player, Int), String) {
-  let ship = player.ship
-  let fuel_needed = ship.max_fuel_units - ship.fuel_units
-
-  // Calculate how much fuel we can actually buy
-  let max_affordable = player.credits / price_per_unit
-  let max_purchase = int.min(units_to_buy, fuel_needed)
-  let purchase_amount = int.min(max_purchase, max_affordable)
-  let purchase_amount = int.min(purchase_amount, fuel_available)
-
-  case purchase_amount <= 0 {
-    True ->
-      Error(
-        "Cannot purchase fuel: either no need, no credits, or none available",
-      )
-    False -> {
-      let cost = purchase_amount * price_per_unit
-      let updated_credits = player.credits - cost
-      let updated_ship = ship.refuel(ship, purchase_amount)
-      let updated_player =
-        Player(..player, credits: updated_credits, ship: updated_ship)
-      Ok(#(updated_player, purchase_amount))
-    }
-  }
-}
-
 pub fn to_string(p: Player) -> String {
   let homeworld_str = case p.homeworld {
     option.Some(planet) -> "Homeworld: " <> planet.name
