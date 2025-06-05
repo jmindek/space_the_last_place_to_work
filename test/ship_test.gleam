@@ -87,6 +87,7 @@ fn create_test_ship(
 
   ship.Ship(
     location: #(0, 0),
+    previous_location: #(0, 0),
     speed: 0,
     max_speed: 10,
     class: class,
@@ -273,14 +274,14 @@ pub fn get_fuel_percentage_test() {
 
 pub fn can_move_test() {
   // Test can move exact distance
-  let test_ship = create_test_ship(5, 5, 5, 5) |> with_fuel(500, 5000)
+  let test_ship = create_test_ship(5, 5, 5, 5) |> with_fuel(50, 5000)
   ship.can_move(test_ship, 50)
-  // 50 * 10 = 500 fuel
+  // 50 * 1 = 50 fuel
   |> should.be_true
 
   // Test can't move (not enough fuel)
   ship.can_move(test_ship, 51)
-  // 51 * 10 = 510 > 500
+  // 51 * 1 = 51 > 50
   |> should.be_false
 
   // Test edge case (exact fuel)
@@ -359,18 +360,17 @@ pub fn move_to_test() {
 }
 
 pub fn consume_fuel_test() {
-  // Create a ship with 1000 fuel units
+  // Create a ship with 100 fuel units
   let test_ship =
     create_test_ship(5, 10, 5, 5)
-    |> with_fuel(1000, 5000)
-
+    |> with_fuel(100, 5000)
   // Test normal fuel consumption
   case ship.consume_fuel(test_ship, 50) {
-    // 50 * 10 = 500 fuel
+    // 50 * 1 = 50 fuel
     Ok(consumed) -> {
       consumed.fuel_units
-      |> should.equal(500)
-      // 1000 - 500 = 500
+      |> should.equal(50)
+      // 100 - 50 = 50
 
       // Test consuming all remaining fuel
       case ship.consume_fuel(consumed, 50) {
@@ -398,10 +398,11 @@ pub fn consume_fuel_test() {
   }
 
   // Test zero distance
-  case ship.consume_fuel(test_ship, 0) {
+  let test_ship2 = create_test_ship(5, 10, 5, 5) |> with_fuel(100, 5000)
+  case ship.consume_fuel(test_ship2, 0) {
     Ok(no_consumption) -> {
       no_consumption.fuel_units
-      |> should.equal(1000)
+      |> should.equal(100)
       // Fuel should remain unchanged
     }
     Error(_) -> {
@@ -410,11 +411,12 @@ pub fn consume_fuel_test() {
   }
 
   // Test negative distance (should be treated as 0)
-  case ship.consume_fuel(test_ship, -10) {
+  let test_ship3 = create_test_ship(5, 10, 5, 5) |> with_fuel(100, 5000)
+  case ship.consume_fuel(test_ship3, -10) {
     Ok(consumed) ->
       consumed.fuel_units
-      |> should.equal(900)
-    // 1000 - (10 * 10) = 900
+      |> should.equal(90)
+    // 100 - (10 * 1) = 90
     Error(_) -> {
       Nil
     }

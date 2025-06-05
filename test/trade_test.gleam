@@ -11,6 +11,7 @@ pub fn greed_tax_test() -> Nil {
       name: "TestPlayer",
       ship: ship.Ship(
         location: #(0, 0),
+        previous_location: #(0, 0),
         speed: 0,
         max_speed: 10,
         class: ship.Shuttle,

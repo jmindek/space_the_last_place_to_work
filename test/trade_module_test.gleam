@@ -37,6 +37,7 @@ fn create_test_player(
   let ship =
     ship.Ship(
       location: #(0, 0),
+      previous_location: #(0, 0),
       speed: 1,
       max_speed: 10,
       class: ship.Freighter,
@@ -196,6 +197,7 @@ fn test_insufficient_cargo_space() -> Result(Nil, String) {
   let test_ship =
     ship.Ship(
       location: #(0, 0),
+      previous_location: #(0, 0),
       speed: 1,
       max_speed: 10,
       class: ship.Freighter,

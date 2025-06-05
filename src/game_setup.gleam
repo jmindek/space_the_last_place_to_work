@@ -34,6 +34,8 @@ pub fn setup() -> Result(game_types.GameState, String) {
   let player_ship =
     ship.Ship(
       location: #(homeworld.position.x, homeworld.position.y),
+      previous_location: #(homeworld.position.x, homeworld.position.y),
+      // Initialize with same as current location
       speed: 0,
       max_speed: 10,
       class: ship.Freighter,

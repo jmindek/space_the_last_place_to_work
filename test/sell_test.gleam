@@ -35,6 +35,7 @@ fn create_test_player() -> player.Player {
   let test_ship =
     ship.Ship(
       location: #(0, 0),
+      previous_location: #(0, 0),
       speed: 5,
       max_speed: 10,
       class: ship.Freighter,

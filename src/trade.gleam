@@ -469,6 +469,7 @@ pub fn process_purchase(
               let updated_ship =
                 ship.Ship(
                   location: player.ship.location,
+                  previous_location: player.ship.previous_location,
                   speed: player.ship.speed,
                   max_speed: player.ship.max_speed,
                   class: player.ship.class,

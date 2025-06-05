@@ -18,6 +18,8 @@ pub type ShipClass {
 pub type Ship {
   Ship(
     location: #(Int, Int),
+    previous_location: #(Int, Int),
+    // Track the previous location
     speed: Int,
     max_speed: Int,
     class: ShipClass,
@@ -49,7 +51,12 @@ pub fn move_ship(ship: Ship, x: Int, y: Int, universe_size: Int) -> Ship {
   let wrapped_x = wrap(x, universe_size)
   let wrapped_y = wrap(y, universe_size)
 
-  Ship(..ship, location: #(wrapped_x, wrapped_y))
+  // Update ship with new location and previous location
+  Ship(
+    ..ship,
+    location: #(wrapped_x, wrapped_y),
+    previous_location: ship.location,
+  )
 }
 
 // Update the ship's speed
@@ -171,6 +178,8 @@ pub fn new_ship(class: ShipClass, location: #(Int, Int)) -> Ship {
 
   Ship(
     location: location,
+    previous_location: location,
+    // Initialize with the same location
     speed: 0,
     // Start at 0 speed
     max_speed: 10,
@@ -202,14 +211,14 @@ pub fn move_to(ship: Ship, new_location: #(Int, Int)) -> Ship {
 }
 
 // Consume fuel based on distance traveled
+// For regular movement, consumes 1 fuel unit per unit of distance
 pub fn consume_fuel(ship: Ship, distance: Int) -> Result(Ship, String) {
   let Ship(fuel_units: current_fuel, ..) = ship
   let absolute_distance = case distance < 0 {
     True -> -distance
     False -> distance
   }
-  let fuel_cost = absolute_distance * 10
-  // 10 fuel units per unit distance
+  let fuel_cost = absolute_distance * 1
 
   case current_fuel - fuel_cost {
     remaining if remaining >= 0 -> Ok(Ship(..ship, fuel_units: remaining))
@@ -237,8 +246,7 @@ pub fn get_fuel_percentage(ship: Ship) -> Float {
 // Check if the ship can make a move of the given distance
 pub fn can_move(ship: Ship, distance: Int) -> Bool {
   let Ship(fuel_units: current, ..) = ship
-  current >= distance * 10
-  // 10 fuel units per unit distance
+  current >= distance * 1
 }
 
 // Get the ship's current shield percentage
@@ -300,6 +308,7 @@ pub fn repair_weapons(ship: Ship, amount: Int) -> Ship {
 pub fn to_string(ship: Ship) -> String {
   let Ship(
     location: #(x, y),
+    previous_location: #(prev_x, prev_y),
     speed: speed,
     max_speed: max_speed,
     class: class,
@@ -336,6 +345,11 @@ pub fn to_string(ship: Ship) -> String {
   <> int.to_string(x)
   <> ", "
   <> int.to_string(y)
+  <> ")\n"
+  <> "Previous Location: ("
+  <> int.to_string(prev_x)
+  <> ", "
+  <> int.to_string(prev_y)
   <> ")\n"
   <> "Speed: "
   <> int.to_string(speed)
