@@ -183,10 +183,11 @@ fn handle_ftl_destination_selection(
   npc_ships: option.Option(List(ship.Ship)),
 ) -> game_types.GameState {
   case int.parse(input) {
-    Ok(index) -> {
-      // Find destination by index
-      case list.at(destinations, index - 1) {
-        Ok(destination) -> {
+    Ok(requested_index) -> {
+      // Convert to 0-based index and find destination
+      let destination_index = requested_index - 1
+      case list.drop(destinations, destination_index) {
+        [destination, ..] -> {
           case ftl_travel(player, destination) {
             Ok(updated_player) -> {
               io.println("Arrived at " <> destination.name <> "!")
@@ -198,7 +199,7 @@ fn handle_ftl_destination_selection(
             }
           }
         }
-        Error(_) -> {
+        _ -> {
           io.println("Invalid selection. FTL travel cancelled.")
           game_types.Continue(player, universe, npc_ships)
         }
