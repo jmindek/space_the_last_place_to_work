@@ -143,6 +143,10 @@ pub fn player_turn(
   let max_speed = ship.max_speed
   let fuel = ship.fuel_units
 
+  // Check if player is at a starport
+  let current_planet_result =
+    list.find(universe.planets, fn(p) { p.position.x == x && p.position.y == y })
+
   // Show status
   io.println(
     name
@@ -152,6 +156,18 @@ pub fn player_turn(
     <> int.to_string(y)
     <> ".",
   )
+
+  // Show docked status if at a starport
+  case current_planet_result {
+    Ok(planet) -> {
+      case planet.has_starport {
+        True -> io.println("Docked at starport.")
+        False -> Nil
+      }
+    }
+    Error(_) -> Nil
+  }
+
   io.println("Credits: " <> int.to_string(credits))
   io.println(
     "Fuel: " <> int.to_string(fuel) <> "/" <> int.to_string(ship.max_fuel_units),

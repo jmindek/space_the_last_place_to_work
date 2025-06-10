@@ -121,8 +121,9 @@ pub fn random_bool() -> Bool {
 }
 
 pub fn generate_planet(size: Int) -> Planet {
-  let x = int.random(size)
-  let y = int.random(size)
+  // Ensure coordinates are within universe bounds (0 to universe_width-1 and 0 to universe_height-1)
+  let x = int.random(universe_width)
+  let y = int.random(universe_height)
 
   Planet(
     position: Position(x: x, y: y),

@@ -41,18 +41,17 @@ pub fn main() -> Result(Nil, String) {
 
           case starting_planet {
             Ok(planet) -> {
-              // Position the player at the starting planet
-              let updated_ship =
-                ship.move_ship(
-                  p.ship,
+              // Create a new ship at the planet's location
+              let player_ship =
+                ship.new_ship(p.ship.class, #(
                   planet.position.x,
                   planet.position.y,
-                  universe.universe_width,
-                )
+                ))
+
               let player =
                 player.Player(
                   name: p.name,
-                  ship: updated_ship,
+                  ship: player_ship,
                   homeworld: option.Some(planet),
                   credits: p.credits,
                   cargo: p.cargo,

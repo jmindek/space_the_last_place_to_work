@@ -41,11 +41,11 @@ pub fn show_minimap(
     <> ") ===",
   )
 
-  // Helper function to wrap coordinates within universe bounds (0-49)
+  // Helper function to wrap coordinates within universe bounds
   let wrap = fn(coord: Int) -> Int {
-    let mod = coord % 50
+    let mod = coord % universe.universe_width
     case mod < 0 {
-      True -> mod + 50
+      True -> mod + universe.universe_width
       False -> mod
     }
   }
@@ -150,24 +150,9 @@ pub fn show_minimap(
 
   // Print x-axis numbers at the bottom
   io.print("    ")
-  list.each(list.range(0, 9), fn(x_offset) {
-    let x = wrap(start_x + x_offset)
-    let num = int.to_string(x)
-    io.print(case string.length(num) {
-      1 -> "  " <> num
-      2 -> " " <> num
-      _ -> num
-    })
-    io.print(" ")
-  })
-  io.println("")
-
-  io.println("")
-
-  // Print x-axis labels
-  io.print("    ")
-  list.each(display_range(start_x, 10), fn(map_x) {
-    let label = int.to_string(map_x)
+  list.each(list.range(0, 9), fn(i) {
+    let x = wrap(start_x + i)
+    let label = int.to_string(x)
     let padding = 3 - string.length(label)
     let spaces = string.repeat(" ", times: padding)
     io.print(label <> spaces)
