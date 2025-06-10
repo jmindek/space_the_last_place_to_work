@@ -4,6 +4,7 @@ import gleam/float
 import gleam/int
 import gleam/io
 import gleam/list
+import gleam/option.{type Option, None}
 import gleam/string
 import player
 import ship
@@ -79,41 +80,41 @@ fn handle_refuel(
                             "Remaining credits: "
                             <> int.to_string(updated_player.credits),
                           )
-                          game_types.Continue(updated_player, universe)
+                          game_types.Continue(updated_player, universe, None)
                         }
                         False -> {
                           io.println("\nInsufficient credits for refueling.")
-                          game_types.Continue(player, universe)
+                          game_types.Continue(player, universe, None)
                         }
                       }
                     }
                     _ -> {
                       io.println("\nRefueling cancelled.")
-                      game_types.Continue(player, universe)
+                      game_types.Continue(player, universe, None)
                     }
                   }
                 }
                 False -> {
                   io.println("\nYour fuel tanks are already full!")
-                  game_types.Continue(player, universe)
+                  game_types.Continue(player, universe, None)
                 }
               }
             }
             Error(reason) -> {
               io.println("\n" <> reason)
-              game_types.Continue(player, universe)
+              game_types.Continue(player, universe, None)
             }
           }
         }
         False -> {
           io.println("\nNo starport available at this location.")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, None)
         }
       }
     }
     Error(_) -> {
       io.println("\nNo planet at current location.")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
   }
 }
@@ -134,12 +135,17 @@ fn find_ftl_destinations(
 pub fn player_turn(
   universe: universe.Universe,
   player: player.Player,
+  npc_ships: option.Option(List(ship.Ship)),
 ) -> game_types.GameState {
   let player.Player(name, ship, _, credits, cargo) = player
   let #(x, y) = ship.location
   let current_speed = ship.speed
   let max_speed = ship.max_speed
   let fuel = ship.fuel_units
+
+  // Check if player is at a starport
+  let current_planet_result =
+    list.find(universe.planets, fn(p) { p.position.x == x && p.position.y == y })
 
   // Show status
   io.println(
@@ -150,6 +156,18 @@ pub fn player_turn(
     <> int.to_string(y)
     <> ".",
   )
+
+  // Show docked status if at a starport
+  case current_planet_result {
+    Ok(planet) -> {
+      case planet.has_starport {
+        True -> io.println("Docked at starport.")
+        False -> Nil
+      }
+    }
+    Error(_) -> Nil
+  }
+
   io.println("Credits: " <> int.to_string(credits))
   io.println(
     "Fuel: " <> int.to_string(fuel) <> "/" <> int.to_string(ship.max_fuel_units),
@@ -226,7 +244,7 @@ pub fn player_turn(
 
   // Handle empty input first
   case command == "" {
-    True -> game_types.Continue(player, universe)
+    True -> game_types.Continue(player, universe, npc_ships)
     False -> {
       // Handle commands
       case command {
@@ -240,15 +258,25 @@ pub fn player_turn(
           io.println(ship_info)
           io.println("\nPress Enter to continue...")
           let _ = utils.get_line("")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, npc_ships)
         }
 
         // Show location map
         "L" -> {
-          coordinate_map.show_minimap(player, universe)
-          io.println("\nPress Enter to continue...")
-          let _ = utils.get_line("")
-          game_types.Continue(player, universe)
+          case npc_ships {
+            option.Some(ships) -> {
+              coordinate_map.show_minimap(player, universe, ships, False)
+              io.println("\nPress Enter to continue...")
+              let _ = utils.get_line("")
+              game_types.Continue(player, universe, npc_ships)
+            }
+            option.None -> {
+              coordinate_map.show_minimap(player, universe, [], False)
+              io.println("\nPress Enter to continue...")
+              let _ = utils.get_line("")
+              game_types.Continue(player, universe, npc_ships)
+            }
+          }
         }
 
         // Trade at starport
@@ -261,13 +289,19 @@ pub fn player_turn(
         "Q" -> game_types.Quit
 
         // Movement command section
-        "M" -> handle_movement_menu(player, universe, current_planet_result)
+        "M" ->
+          handle_movement_menu(
+            player,
+            universe,
+            current_planet_result,
+            npc_ships,
+          )
 
         // Show system information
         "S" -> show_system_information(player, universe, current_planet_result)
 
         // Thruster speed settings (dynamic T#)
-        _ -> handle_thruster_speed(command, player, universe, max_speed)
+        _ -> handle_thruster_speed(command, player, universe)
       }
     }
   }
@@ -289,7 +323,7 @@ fn handle_ftl_travel(
           io.println(
             "You must be at or near a planet with an FTL lane to use FTL travel.",
           )
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, None)
         }
         _ -> show_ftl_destinations(player, universe, destinations)
       }
@@ -298,7 +332,7 @@ fn handle_ftl_travel(
       io.println(
         "\nYou must be at or near a planet with an FTL lane to use FTL travel.",
       )
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
   }
 }
@@ -345,7 +379,7 @@ fn show_ftl_destinations(
   case input {
     "" -> {
       io.println("FTL travel cancelled.")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
     _ -> {
       case int.parse(input) {
@@ -354,12 +388,6 @@ fn show_ftl_destinations(
           let remaining = list.drop(destinations, choice - 1)
           case list.first(remaining) {
             Ok(dest) -> {
-              // Move the player to the destination planet first (without consuming fuel for the move)
-              let #(current_x, current_y) = player.ship.location
-              let dx = int.absolute_value(dest.position.x - current_x)
-              let dy = int.absolute_value(dest.position.y - current_y)
-              let distance = dx + dy
-
               // Only consume FTL fuel (250 units)
               case player.consume_ftl_fuel(player) {
                 Ok(player_with_less_fuel) -> {
@@ -373,29 +401,29 @@ fn show_ftl_destinations(
                       // Use the ship with updated fuel
                       dest.position.x,
                       dest.position.y,
-                      universe.size,
+                      universe.universe_width,
                     )
                   let updated_player =
                     player.Player(..player_with_less_fuel, ship: updated_ship)
 
                   io.println("Arrived at " <> dest.name <> "!")
-                  game_types.Continue(updated_player, universe)
+                  game_types.Continue(updated_player, universe, None)
                 }
                 Error(e) -> {
                   io.println("FTL jump failed: " <> e)
-                  game_types.Continue(player, universe)
+                  game_types.Continue(player, universe, None)
                 }
               }
             }
             Error(_) -> {
               io.println("Invalid selection. FTL travel cancelled.")
-              game_types.Continue(player, universe)
+              game_types.Continue(player, universe, None)
             }
           }
         }
         Error(_) -> {
           io.println("Invalid input. Please enter a number.")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, None)
         }
       }
     }
@@ -416,23 +444,23 @@ fn handle_starport_trade(
           case trade.show_trade_menu(player, planet) {
             Ok(updated_player) -> {
               io.println("\nLeaving starport...")
-              game_types.Continue(updated_player, universe)
+              game_types.Continue(updated_player, universe, None)
             }
             Error(e) -> {
               io.println("Error in trade: " <> e)
-              game_types.Continue(player, universe)
+              game_types.Continue(player, universe, None)
             }
           }
         }
         False -> {
           io.println("No starport at " <> planet.name <> "!")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, None)
         }
       }
     }
     Error(_) -> {
       io.println("No planet at current location!")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
   }
 }
@@ -441,9 +469,14 @@ fn handle_movement_menu(
   player: player.Player,
   universe: universe.Universe,
   current_planet_result: Result(universe.Planet, Nil),
+  npc_ships: Option(List(ship.Ship)),
 ) -> game_types.GameState {
-  // Show minimap
-  coordinate_map.show_minimap(player, universe)
+  // Show minimap with NPC info
+  case npc_ships {
+    option.Some(ships) ->
+      coordinate_map.show_minimap(player, universe, ships, True)
+    option.None -> coordinate_map.show_minimap(player, universe, [], True)
+  }
 
   // Show menu options
   io.println("\n  (C)oordinates - Enter specific coordinates to move to")
@@ -461,7 +494,7 @@ fn handle_movement_menu(
   // Handle menu selection
   case string.uppercase(input) {
     // Coordinates input
-    "C" -> handle_coordinates_input(player, universe)
+    "C" -> handle_coordinates_input(player, universe, npc_ships)
 
     // FTL travel
     "F" -> handle_ftl_travel(player, universe, current_planet_result)
@@ -479,23 +512,24 @@ fn handle_movement_menu(
       io.println("Q - Return to main menu")
       io.println("\nPress Enter to continue...")
       let _ = utils.get_line("")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
 
     // Handle Q to quit
-    "Q" -> game_types.Continue(player, universe)
+    "Q" -> game_types.Continue(player, universe, None)
 
     // Handle empty input
-    "" -> game_types.Continue(player, universe)
+    "" -> game_types.Continue(player, universe, None)
 
     // Handle T# command (speed change)
-    _ -> handle_thruster_speed(input, player, universe, player.ship.max_speed)
+    _ -> handle_thruster_speed(input, player, universe)
   }
 }
 
 fn handle_coordinates_input(
   player: player.Player,
   universe: universe.Universe,
+  npc_ships: Option(List(ship.Ship)),
 ) -> game_types.GameState {
   io.println("\nEnter target coordinates (X:Y):")
   io.print("> ")
@@ -514,14 +548,34 @@ fn handle_coordinates_input(
           case y_parsed {
             Ok(y) -> {
               let #(current_x, current_y) = player.ship.location
-              let dx = int.absolute_value(x - current_x)
-              let dy = int.absolute_value(y - current_y)
+
+              // Calculate wrapped distances (accounting for 10x10 universe)
+              let wrap_distance = fn(a: Int, b: Int) -> Int {
+                let universe_size = 10
+                // Ensure coordinates are positive and within universe bounds
+                let wrap_coord = fn(coord: Int) -> Int {
+                  let mod = coord % universe_size
+                  case mod < 0 {
+                    True -> mod + universe_size
+                    False -> mod
+                  }
+                }
+
+                let a_wrapped = wrap_coord(a)
+                let b_wrapped = wrap_coord(b)
+                let diff = int.absolute_value(a_wrapped - b_wrapped)
+                // The minimum of direct distance and wrapped distance
+                int.min(diff, universe_size - diff)
+              }
+
+              let dx = wrap_distance(x, current_x)
+              let dy = wrap_distance(y, current_y)
               // Using Manhattan distance (sum of x and y differences)
               let distance = dx + dy
 
               case distance <= player.ship.speed && distance > 0 {
                 True ->
-                  case player.move_ship(player, x, y, universe) {
+                  case player.move_ship(player, x, y) {
                     Ok(updated_player) -> {
                       io.println(
                         "\nMoved to "
@@ -529,18 +583,18 @@ fn handle_coordinates_input(
                         <> ":"
                         <> int.to_string(y),
                       )
-                      game_types.Continue(updated_player, universe)
+                      game_types.Continue(updated_player, universe, npc_ships)
                     }
                     Error(e) -> {
                       io.println("\nError: " <> e)
-                      game_types.Continue(player, universe)
+                      game_types.Continue(player, universe, None)
                     }
                   }
                 False -> {
                   case distance == 0 {
                     True -> {
                       io.println("Error: You're already at that location!")
-                      game_types.Continue(player, universe)
+                      game_types.Continue(player, universe, None)
                     }
                     False -> {
                       io.println(
@@ -552,7 +606,7 @@ fn handle_coordinates_input(
                         <> int.to_string(distance)
                         <> " units",
                       )
-                      game_types.Continue(player, universe)
+                      game_types.Continue(player, universe, None)
                     }
                   }
                 }
@@ -560,30 +614,30 @@ fn handle_coordinates_input(
             }
             Error(_) -> {
               io.println("\nError: Invalid Y coordinate")
-              game_types.Continue(player, universe)
+              game_types.Continue(player, universe, None)
             }
           }
         }
         Error(_) -> {
           io.println("\nError: Invalid X coordinate")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, None)
         }
       }
     }
     // Handle cases with wrong number of coordinates
     [] -> {
       io.println("\nError: Please enter coordinates in the format X:Y")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
     [_] -> {
       io.println(
         "\nError: Please enter both X and Y coordinates separated by a colon (X:Y)",
       )
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
     _ -> {
       io.println("\nError: Too many coordinates. Please enter exactly X:Y")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
   }
 }
@@ -687,11 +741,11 @@ fn show_system_information(
 
       io.println("\nPress Enter to continue...")
       let _ = utils.get_line("")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
     Error(_) -> {
       io.println("No planet at current location!")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
   }
 }
@@ -700,7 +754,6 @@ fn handle_thruster_speed(
   command: String,
   player: player.Player,
   universe: universe.Universe,
-  max_speed: Int,
 ) -> game_types.GameState {
   // Check if the command starts with "T"
   case string.slice(command, 0, 1) {
@@ -713,26 +766,26 @@ fn handle_thruster_speed(
               let updated_ship = ship.set_speed(player.ship, speed)
               let updated_player = player.Player(..player, ship: updated_ship)
               io.println("\nSpeed set to " <> int.to_string(speed))
-              game_types.Continue(updated_player, universe)
+              game_types.Continue(updated_player, universe, None)
             }
             False -> {
               io.println(
                 "\nInvalid speed. Must be between 1 and "
                 <> int.to_string(player.ship.max_speed),
               )
-              game_types.Continue(player, universe)
+              game_types.Continue(player, universe, None)
             }
           }
         }
         Error(_) -> {
           io.println("\nInvalid speed command. Use T# where # is a number.")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, None)
         }
       }
     }
     _ -> {
       io.println("Unknown command: " <> command)
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, None)
     }
   }
 }

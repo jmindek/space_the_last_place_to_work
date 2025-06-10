@@ -87,12 +87,7 @@ pub fn set_homeworld(
 
 // Move the player's ship to new coordinates in a continuous universe
 // If coordinates exceed bounds, they wrap around to the opposite side
-pub fn move_ship(
-  player: Player,
-  x: Int,
-  y: Int,
-  universe: universe.Universe,
-) -> Result(Player, String) {
+pub fn move_ship(player: Player, x: Int, y: Int) -> Result(Player, String) {
   let #(current_x, current_y) = player.ship.location
   let dx = int.absolute_value(x - current_x)
   let dy = int.absolute_value(y - current_y)
@@ -101,7 +96,7 @@ pub fn move_ship(
   case ship.consume_fuel(player.ship, distance) {
     Ok(ship_with_fuel_consumed) -> {
       let updated_ship =
-        ship.move_ship(ship_with_fuel_consumed, x, y, universe.size)
+        ship.move_ship(ship_with_fuel_consumed, x, y, universe.universe_width)
       Ok(Player(..player, ship: updated_ship))
     }
     Error(e) -> Error(e)

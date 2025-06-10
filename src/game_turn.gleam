@@ -3,6 +3,7 @@ import game_types
 import gleam/int
 import gleam/io
 import gleam/list
+import gleam/option
 import gleam/string
 import player
 import ship
@@ -12,14 +13,15 @@ import utils
 pub fn turn(
   universe: universe.Universe,
   player: player.Player,
+  npc_ships: List(ship.Ship),
 ) -> game_types.GameState {
-  case player_turn(universe, player) {
-    game_types.Continue(updated_player, updated_universe) -> {
+  case player_turn(universe, player, npc_ships) {
+    game_types.Continue(updated_player, updated_universe, updated_npc_ships) -> {
       let #(next_player, updated_universe) =
         npc_turn(updated_universe, updated_player)
       let #(next_player, updated_universe) =
         environment_turn.environment_turn(updated_universe, next_player)
-      game_types.Continue(next_player, updated_universe)
+      game_types.Continue(next_player, updated_universe, updated_npc_ships)
     }
     game_types.Quit -> game_types.Quit
   }
@@ -28,6 +30,7 @@ pub fn turn(
 fn player_turn(
   universe: universe.Universe,
   player: player.Player,
+  npc_ships: List(ship.Ship),
 ) -> game_types.GameState {
   let player.Player(name, player_ship, _, credits, cargo) = player
   let #(x, y) = player_ship.location
@@ -71,8 +74,8 @@ fn player_turn(
 
   // Handle empty input
   case command == "" {
-    True -> game_types.Continue(player, universe)
-    False -> handle_command(command, player, universe)
+    True -> game_types.Continue(player, universe, option.Some(npc_ships))
+    False -> handle_command(command, player, universe, option.Some(npc_ships))
   }
 }
 
@@ -80,6 +83,7 @@ fn handle_command(
   command: String,
   player: player.Player,
   universe: universe.Universe,
+  npc_ships: option.Option(List(ship.Ship)),
 ) -> game_types.GameState {
   // Handle commands
   case command {
@@ -91,16 +95,16 @@ fn handle_command(
       io.println("Q - Quit to main menu")
       io.println("\nPress Enter to continue...")
       let _ = utils.get_trimmed_line("")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, npc_ships)
     }
     // FTL Travel
-    "F" -> handle_ftl_travel(player, universe)
+    "F" -> handle_ftl_travel(player, universe, npc_ships)
     // Quit
     "Q" -> game_types.Quit
     // Add other command handlers here...
     _ -> {
       io.println("Unknown command. Type 'H' for help.")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, npc_ships)
     }
   }
 }
@@ -108,6 +112,7 @@ fn handle_command(
 fn handle_ftl_travel(
   player: player.Player,
   universe: universe.Universe,
+  npc_ships: option.Option(List(ship.Ship)),
 ) -> game_types.GameState {
   case get_current_planet(player, universe) {
     Ok(_planet) -> {
@@ -115,7 +120,7 @@ fn handle_ftl_travel(
       case destinations {
         [] -> {
           io.println("\nNo valid FTL destinations from this location.")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, npc_ships)
         }
         _ -> {
           io.println("\nAvailable FTL Destinations:")
@@ -147,7 +152,7 @@ fn handle_ftl_travel(
           case input {
             "C" -> {
               io.println("FTL travel cancelled.")
-              game_types.Continue(player, universe)
+              game_types.Continue(player, universe, npc_ships)
             }
             _ ->
               handle_ftl_destination_selection(
@@ -155,6 +160,7 @@ fn handle_ftl_travel(
                 destinations,
                 player,
                 universe,
+                npc_ships,
               )
           }
         }
@@ -164,7 +170,7 @@ fn handle_ftl_travel(
       io.println(
         "\nYou must be at or near a planet with an FTL lane to use FTL travel.",
       )
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, npc_ships)
     }
   }
 }
@@ -174,32 +180,34 @@ fn handle_ftl_destination_selection(
   destinations: List(universe.Planet),
   player: player.Player,
   universe: universe.Universe,
+  npc_ships: option.Option(List(ship.Ship)),
 ) -> game_types.GameState {
   case int.parse(input) {
-    Ok(index) -> {
-      // Find destination by index
-      case list.at(destinations, index - 1) {
-        Ok(destination) -> {
-          case ftl_travel(player, universe, destination) {
+    Ok(requested_index) -> {
+      // Convert to 0-based index and find destination
+      let destination_index = requested_index - 1
+      case list.drop(destinations, destination_index) {
+        [destination, ..] -> {
+          case ftl_travel(player, destination) {
             Ok(updated_player) -> {
               io.println("Arrived at " <> destination.name <> "!")
-              game_types.Continue(updated_player, universe)
+              game_types.Continue(updated_player, universe, npc_ships)
             }
             Error(e) -> {
               io.println("FTL travel failed: " <> e)
-              game_types.Continue(player, universe)
+              game_types.Continue(player, universe, npc_ships)
             }
           }
         }
-        Error(_) -> {
+        _ -> {
           io.println("Invalid selection. FTL travel cancelled.")
-          game_types.Continue(player, universe)
+          game_types.Continue(player, universe, npc_ships)
         }
       }
     }
     Error(_) -> {
       io.println("Invalid input. Please enter a number.")
-      game_types.Continue(player, universe)
+      game_types.Continue(player, universe, npc_ships)
     }
   }
 }
@@ -256,7 +264,6 @@ fn find_ftl_destinations(
 // Handle FTL travel between planets
 fn ftl_travel(
   player: player.Player,
-  universe: universe.Universe,
   destination: universe.Planet,
 ) -> Result(player.Player, String) {
   let player.Player(name, player_ship, homeworld, credits, cargo) = player

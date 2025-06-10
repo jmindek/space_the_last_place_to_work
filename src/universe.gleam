@@ -5,6 +5,11 @@ import gleam/result
 import gleam/string
 import trade_goods
 
+// The size of the universe grid
+pub const universe_width = 50
+
+pub const universe_height = 50
+
 pub type IndustryType {
   Agra
   Mining
@@ -53,7 +58,7 @@ pub fn industry_to_string(industry: IndustryType) -> String {
 }
 
 pub type Universe {
-  Universe(size: Int, planets: List(Planet))
+  Universe(planets: List(Planet))
 }
 
 fn random_industry() -> IndustryType {
@@ -115,9 +120,10 @@ pub fn random_bool() -> Bool {
   int.random(2) == 1
 }
 
-pub fn generate_planet(size: Int) -> Planet {
-  let x = int.random(size)
-  let y = int.random(size)
+pub fn generate_planet() -> Planet {
+  // Ensure coordinates are within universe bounds (0 to universe_width-1 and 0 to universe_height-1)
+  let x = int.random(universe_width)
+  let y = int.random(universe_height)
 
   Planet(
     position: Position(x: x, y: y),
@@ -147,24 +153,24 @@ fn is_position_taken(position: Position, planets: List(Planet)) -> Bool {
   })
 }
 
-fn generate_unique_planet(size: Int, existing_planets: List(Planet)) -> Planet {
-  let planet = generate_planet(size)
+fn generate_unique_planet(existing_planets: List(Planet)) -> Planet {
+  let planet = generate_planet()
   case is_position_taken(planet.position, existing_planets) {
-    True -> generate_unique_planet(size, existing_planets)
+    True -> generate_unique_planet(existing_planets)
     False -> planet
   }
 }
 
-fn generate_planets(count: Int, size: Int, acc: List(Planet)) -> List(Planet) {
+fn generate_planets(count: Int, acc: List(Planet)) -> List(Planet) {
   case count {
     0 -> acc
     _ -> {
-      let planet = generate_unique_planet(size, acc)
-      generate_planets(count - 1, size, [planet, ..acc])
+      let planet = generate_unique_planet(acc)
+      generate_planets(count - 1, [planet, ..acc])
     }
   }
 }
 
-pub fn create_universe(size: Int, num_planets: Int) -> Universe {
-  Universe(size: size, planets: generate_planets(num_planets, size, []))
+pub fn create_universe(num_planets: Int) -> Universe {
+  Universe(planets: generate_planets(num_planets, []))
 }

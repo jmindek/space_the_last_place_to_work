@@ -42,9 +42,10 @@ pub type Ship {
 pub fn move_ship(ship: Ship, x: Int, y: Int, universe_size: Int) -> Ship {
   // Calculate wrapped coordinates using modulo arithmetic
   let wrap = fn(coord: Int, size: Int) -> Int {
-    case coord {
-      n if n >= 0 -> n % size
-      n -> size + n % size
+    let mod = coord % size
+    case mod < 0 {
+      True -> mod + size
+      False -> mod
     }
   }
 
