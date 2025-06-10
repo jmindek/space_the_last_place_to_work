@@ -30,7 +30,7 @@ pub fn main() -> Result(Nil, String) {
   {
     Ok(Nil) -> {
       // User continued, initialize the game
-      let universe = universe.create_universe(100, 20)
+      let universe = universe.create_universe(20)
 
       // Create a player with a default ship class
       case player.new("Player_1", ship.Freighter) {
@@ -114,7 +114,7 @@ fn turn(
       // We'll ignore the NPC ships from player_turn since we'll use our own
     ) -> {
       // Process NPC turn with the current NPC ships
-      let moved_npc_ships = npc_turn.npc_turn(updated_universe, npc_ships)
+      let moved_npc_ships = npc_turn.npc_turn(npc_ships)
 
       // Process environment turn
       let #(next_player, final_universe) =

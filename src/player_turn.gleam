@@ -301,7 +301,7 @@ pub fn player_turn(
         "S" -> show_system_information(player, universe, current_planet_result)
 
         // Thruster speed settings (dynamic T#)
-        _ -> handle_thruster_speed(command, player, universe, max_speed)
+        _ -> handle_thruster_speed(command, player, universe)
       }
     }
   }
@@ -388,12 +388,6 @@ fn show_ftl_destinations(
           let remaining = list.drop(destinations, choice - 1)
           case list.first(remaining) {
             Ok(dest) -> {
-              // Move the player to the destination planet first (without consuming fuel for the move)
-              let #(current_x, current_y) = player.ship.location
-              let dx = int.absolute_value(dest.position.x - current_x)
-              let dy = int.absolute_value(dest.position.y - current_y)
-              let distance = dx + dy
-
               // Only consume FTL fuel (250 units)
               case player.consume_ftl_fuel(player) {
                 Ok(player_with_less_fuel) -> {
@@ -528,7 +522,7 @@ fn handle_movement_menu(
     "" -> game_types.Continue(player, universe, None)
 
     // Handle T# command (speed change)
-    _ -> handle_thruster_speed(input, player, universe, player.ship.max_speed)
+    _ -> handle_thruster_speed(input, player, universe)
   }
 }
 
@@ -581,7 +575,7 @@ fn handle_coordinates_input(
 
               case distance <= player.ship.speed && distance > 0 {
                 True ->
-                  case player.move_ship(player, x, y, universe) {
+                  case player.move_ship(player, x, y) {
                     Ok(updated_player) -> {
                       io.println(
                         "\nMoved to "
@@ -760,7 +754,6 @@ fn handle_thruster_speed(
   command: String,
   player: player.Player,
   universe: universe.Universe,
-  max_speed: Int,
 ) -> game_types.GameState {
   // Check if the command starts with "T"
   case string.slice(command, 0, 1) {

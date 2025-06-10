@@ -5,9 +5,10 @@ import player
 import ship
 import universe
 
+pub const planet_count = 50
+
 pub fn setup() -> Result(game_types.GameState, String) {
-  let universe =
-    universe.create_universe(universe.universe_width, universe.universe_height)
+  let universe = universe.create_universe(planet_count)
 
   // Find the first planet to use as homeworld
   let homeworld = case universe.planets {

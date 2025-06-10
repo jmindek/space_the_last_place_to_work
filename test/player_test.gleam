@@ -64,7 +64,7 @@ fn create_test_universe() -> universe.Universe {
       trade_goods: [],
     ),
   ]
-  universe.Universe(size: 10, planets: planets)
+  universe.Universe(planets: planets)
 }
 
 pub fn new_player_test() {
@@ -122,24 +122,34 @@ pub fn set_homeworld_test() -> Nil {
 }
 
 pub fn move_ship_test() -> Nil {
-  let test_universe = create_test_universe()
-
   case create_test_player() {
     Ok(p) -> {
       // Test moving within bounds
-      case player.move_ship(p, 5, 5, test_universe) {
+      case player.move_ship(p, 5, 5) {
         Ok(updated) ->
           case updated.ship.location {
-            #(x, y) -> check_coordinates(x, y, test_universe.size)
+            #(x, y) ->
+              check_coordinates(
+                x,
+                y,
+                universe.universe_width,
+                universe.universe_height,
+              )
           }
         Error(_) -> should.fail()
       }
 
       // Test wrapping around the universe
-      case player.move_ship(p, -1, 11, test_universe) {
+      case player.move_ship(p, -1, 11) {
         Ok(wrapped) ->
           case wrapped.ship.location {
-            #(wx, wy) -> check_coordinates(wx, wy, test_universe.size)
+            #(wx, wy) ->
+              check_coordinates(
+                wx,
+                wy,
+                universe.universe_width,
+                universe.universe_height,
+              )
           }
         Error(_) -> should.fail()
       }
@@ -148,27 +158,24 @@ pub fn move_ship_test() -> Nil {
   }
 }
 
-fn check_coordinates(x: Int, y: Int, size: Int) -> Nil {
-  // Verify coordinates are within bounds
-  let check_x_positive = x >= 0
-  check_x_positive
-  |> should.be_true
-  // X coordinate should be >= 0
-
-  let check_y_positive = y >= 0
-  check_y_positive
-  |> should.be_true
-  // Y coordinate should be >= 0
-
-  let check_x_within_bounds = x < size
-  check_x_within_bounds
-  |> should.be_true
-  // X coordinate should be < universe size
-
-  let check_y_within_bounds = y < size
-  check_y_within_bounds
-  |> should.be_true
-  // Y coordinate should be < universe size
+fn check_coordinates(x: Int, y: Int, width: Int, height: Int) -> Nil {
+  // Verify coordinates are within bounds using pattern matching
+  case x >= 0 {
+    True ->
+      case x < width {
+        True ->
+          case y >= 0 {
+            True ->
+              case y < height {
+                True -> Nil
+                False -> should.fail()
+              }
+            False -> should.fail()
+          }
+        False -> should.fail()
+      }
+    False -> should.fail()
+  }
 }
 
 pub fn cargo_display_test() -> Nil {

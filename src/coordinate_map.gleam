@@ -58,11 +58,6 @@ pub fn show_minimap(
     "  (H) Home World  (P) Planet  (S) Starport  (Y) You  (>) NPC Ship",
   )
 
-  // Function to get display range with wrapping for a fixed size
-  let display_range = fn(start, count: Int) -> List(Int) {
-    list.map(list.range(0, count - 1), fn(i) { wrap(start + i) })
-  }
-
   // Print top border
   io.print("   +")
   list.each(list.repeat(item: "---", times: 10), fn(s) { io.print(s) })

@@ -20,17 +20,14 @@ pub fn random_bool_test() {
 }
 
 pub fn generate_planet_test() {
-  // Given
-  let size = 100
-
   // When
-  let planet = universe.generate_planet(size)
+  let planet = universe.generate_planet()
 
   // Then - verify the planet structure and constraints
   should.be_true(planet.position.x >= 0)
-  should.be_true(planet.position.x < size)
+  should.be_true(planet.position.x < universe.universe_width)
   should.be_true(planet.position.y >= 0)
-  should.be_true(planet.position.y < size)
+  should.be_true(planet.position.y < universe.universe_height)
 
   // Test population bounds
   should.be_true(planet.population >= 0)

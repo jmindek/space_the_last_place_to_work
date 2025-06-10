@@ -53,10 +53,7 @@ fn move_ship_randomly(ship: ship.Ship) -> ship.Ship {
   ship.move_ship(ship, wrapped_x, wrapped_y, universe.universe_width)
 }
 
-pub fn npc_turn(
-  universe: universe.Universe,
-  npc_ships: List(ship.Ship),
-) -> List(ship.Ship) {
+pub fn npc_turn(npc_ships: List(ship.Ship)) -> List(ship.Ship) {
   io.println("NPC's turn\n")
 
   // Move each NPC ship randomly

@@ -187,7 +187,7 @@ fn handle_ftl_destination_selection(
       // Find destination by index
       case list.at(destinations, index - 1) {
         Ok(destination) -> {
-          case ftl_travel(player, universe, destination) {
+          case ftl_travel(player, destination) {
             Ok(updated_player) -> {
               io.println("Arrived at " <> destination.name <> "!")
               game_types.Continue(updated_player, universe, npc_ships)
@@ -263,7 +263,6 @@ fn find_ftl_destinations(
 // Handle FTL travel between planets
 fn ftl_travel(
   player: player.Player,
-  universe: universe.Universe,
   destination: universe.Planet,
 ) -> Result(player.Player, String) {
   let player.Player(name, player_ship, homeworld, credits, cargo) = player
