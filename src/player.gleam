@@ -1,7 +1,7 @@
 import gleam/int
 import gleam/list
 import gleam/option
-import gleam/regex
+import gleam/regexp
 import gleam/string
 import ship
 import trade_goods
@@ -22,9 +22,9 @@ pub type Player {
 // Validate player name according to constraints
 fn validate_name(name: String) -> Result(String, String) {
   let pattern = "^[a-zA-Z0-9_-]{1,64}$"
-  case regex.from_string(pattern) {
+  case regexp.from_string(pattern) {
     Ok(re) ->
-      case regex.check(re, name) {
+      case regexp.check(re, name) {
         True -> Ok(name)
         False ->
           Error(

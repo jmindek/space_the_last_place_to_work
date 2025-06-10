@@ -71,10 +71,8 @@ pub fn new_player_test() {
   // Test valid name
   case create_test_player() {
     Ok(p) -> {
-      p.name
-      |> should.equal("TestPlayer")
-      p.credits
-      |> should.equal(1000)
+      assert p.name == "TestPlayer"
+      assert p.credits == 1000
     }
     Error(_) -> should.fail()
   }
@@ -87,9 +85,9 @@ pub fn new_player_test() {
     )
   {
     Ok(_) -> should.fail()
-    Error(e) ->
-      string.contains(e, "must be 1-64 characters")
-      |> should.be_true
+    Error(e) -> {
+      assert string.contains(e, "must be 1-64 characters") == True
+    }
   }
 }
 
@@ -106,10 +104,8 @@ pub fn set_homeworld_test() -> Nil {
             Ok(updated) ->
               case updated.homeworld {
                 option.Some(planet) -> {
-                  planet.name
-                  |> should.equal("Earth")
-                  planet.has_starport
-                  |> should.be_true
+                  assert planet.name == "Earth"
+                  assert planet.has_starport == True
                 }
                 _ -> should.fail()
               }
@@ -198,8 +194,7 @@ pub fn cargo_display_test() -> Nil {
     |> list.fold(0, fn(quantity, acc) { acc + quantity })
 
   // Verify the total is calculated correctly
-  total_cargo
-  |> should.equal(5)
+  assert total_cargo == 5
 
   // Test with empty cargo
   let empty_cargo = []
@@ -208,6 +203,5 @@ pub fn cargo_display_test() -> Nil {
     |> list.map(fn(pair: #(trade_goods.TradeGoods, Int)) { pair.1 })
     |> list.fold(0, fn(quantity, acc) { acc + quantity })
 
-  empty_total
-  |> should.equal(0)
+  assert empty_total == 0
 }

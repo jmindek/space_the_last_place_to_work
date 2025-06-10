@@ -758,7 +758,7 @@ fn handle_thruster_speed(
   // Check if the command starts with "T"
   case string.slice(command, 0, 1) {
     "T" | "t" -> {
-      let speed_str = string.drop_left(command, 1)
+      let speed_str = string.slice(command, 1, string.length(command))
       case int.parse(speed_str) {
         Ok(speed) -> {
           case speed >= 1 && speed <= player.ship.max_speed {

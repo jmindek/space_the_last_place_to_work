@@ -1,5 +1,4 @@
 import gleam/option
-import gleeunit/should
 import player
 import ship
 
@@ -34,6 +33,5 @@ pub fn greed_tax_test() -> Nil {
 
   // TODO: Implement actual test once trade module is updated
   // For now, just verify the test player was created correctly
-  test_player.credits
-  |> should.equal(1000)
+  assert test_player.credits == 1000
 }
