@@ -59,7 +59,7 @@ pub fn main() -> Result(Nil, String) {
 
               let npc_ships =
                 npc.generate_npc_ships(
-                  2,
+                  50,
                   universe.universe_width,
                   universe.universe_height,
                 )

@@ -55,7 +55,7 @@ pub fn show_minimap(
   let start_x = wrap(x - 5)
   let start_y = wrap(y - 5)
   io.println(
-    "  (.) Empty space  (P) Planet  (S) Starport  (Y) You  (>) NPC Ship",
+    "  (H) Home World  (P) Planet  (S) Starport  (Y) You  (>) NPC Ship",
   )
 
   // Function to get display range with wrapping for a fixed size
