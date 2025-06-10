@@ -3,6 +3,7 @@ import game_types
 import gleam/io
 import gleam/list
 import gleam/option
+import npc
 import npc_turn
 import player
 import player_turn
@@ -57,8 +58,11 @@ pub fn main() -> Result(Nil, String) {
                   cargo: p.cargo,
                 )
 
+              let npc_ships =
+                npc.generate_npc_ships(5, universe.size, universe.size)
+
               // Start the game loop
-              game_loop(universe, player)
+              game_loop(universe, player, npc_ships)
               Ok(Nil)
             }
             Error(_) -> Error("No starting planet with starport found")
@@ -71,10 +75,23 @@ pub fn main() -> Result(Nil, String) {
   }
 }
 
-fn game_loop(universe: universe.Universe, player: player.Player) -> Nil {
-  case turn(universe, player) {
-    game_types.Continue(updated_player, updated_universe) ->
-      game_loop(updated_universe, updated_player)
+fn game_loop(
+  universe: universe.Universe,
+  player: player.Player,
+  npc_ships: List(ship.Ship),
+) -> Nil {
+  case turn(universe, player, npc_ships) {
+    game_types.Continue(
+      updated_player,
+      updated_universe,
+      maybe_updated_npc_ships,
+    ) -> {
+      case maybe_updated_npc_ships {
+        option.Some(updated_npc_ships) ->
+          game_loop(updated_universe, updated_player, updated_npc_ships)
+        option.None -> game_loop(updated_universe, updated_player, [])
+      }
+    }
     game_types.Quit -> io.println("\nThanks for playing!")
   }
 }
@@ -83,13 +100,29 @@ fn game_loop(universe: universe.Universe, player: player.Player) -> Nil {
 fn turn(
   universe: universe.Universe,
   player: player.Player,
+  npc_ships: List(ship.Ship),
 ) -> game_types.GameState {
-  case player_turn.player_turn(universe, player) {
-    game_types.Continue(updated_player, updated_universe) -> {
-      let next_player = npc_turn.npc_turn(updated_universe, updated_player)
-      let #(next_player, updated_universe) =
-        environment_turn.environment_turn(updated_universe, next_player)
-      game_types.Continue(next_player, updated_universe)
+  // First, process player turn
+  case player_turn.player_turn(universe, player, option.Some(npc_ships)) {
+    game_types.Continue(
+      updated_player,
+      updated_universe,
+      maybe_updated_npc_ships,
+    ) -> {
+      // Then process NPC turn with the updated NPC ships
+      let moved_npc_ships = case maybe_updated_npc_ships {
+        option.Some(updated_npc_ships) -> {
+          let moved = npc_turn.npc_turn(updated_universe, updated_npc_ships)
+          option.Some(moved)
+        }
+        option.None -> option.None
+      }
+
+      // Finally, process environment turn
+      let #(next_player, final_universe) =
+        environment_turn.environment_turn(updated_universe, updated_player)
+
+      game_types.Continue(next_player, final_universe, moved_npc_ships)
     }
     game_types.Quit -> game_types.Quit
   }

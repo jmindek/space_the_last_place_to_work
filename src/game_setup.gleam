@@ -1,11 +1,13 @@
 import game_types
 import gleam/option
+import npc
 import player
 import ship
 import universe
 
 pub fn setup() -> Result(game_types.GameState, String) {
-  let universe = universe.create_universe(100, 60)
+  let universe =
+    universe.create_universe(universe.universe_width, universe.universe_height)
 
   // Find the first planet to use as homeworld
   let homeworld = case universe.planets {
@@ -62,5 +64,12 @@ pub fn setup() -> Result(game_types.GameState, String) {
       cargo: [],
     )
 
-  Ok(game_types.Continue(player, universe))
+  let npc_ships =
+    npc.generate_npc_ships(
+      100,
+      universe.universe_width,
+      universe.universe_height,
+    )
+
+  Ok(game_types.Continue(player, universe, option.Some(npc_ships)))
 }

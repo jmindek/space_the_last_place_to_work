@@ -5,6 +5,11 @@ import gleam/result
 import gleam/string
 import trade_goods
 
+// The size of the universe grid
+pub const universe_width = 50
+
+pub const universe_height = 50
+
 pub type IndustryType {
   Agra
   Mining
