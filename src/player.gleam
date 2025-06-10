@@ -101,7 +101,7 @@ pub fn move_ship(
   case ship.consume_fuel(player.ship, distance) {
     Ok(ship_with_fuel_consumed) -> {
       let updated_ship =
-        ship.move_ship(ship_with_fuel_consumed, x, y, universe.size)
+        ship.move_ship(ship_with_fuel_consumed, x, y, universe.universe_width)
       Ok(Player(..player, ship: updated_ship))
     }
     Error(e) -> Error(e)

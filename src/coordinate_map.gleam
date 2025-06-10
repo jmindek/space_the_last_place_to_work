@@ -32,95 +32,88 @@ pub fn show_minimap(
   }
   let #(x, y) = player.ship.location
 
-  // Helper function to wrap coordinates within universe bounds (0-9)
+  // Display player's current position
+  io.println(
+    "\n=== Minimap (You are at "
+    <> int.to_string(x)
+    <> ":"
+    <> int.to_string(y)
+    <> ") ===",
+  )
+
+  // Helper function to wrap coordinates within universe bounds (0-49)
   let wrap = fn(coord: Int) -> Int {
-    let mod = coord % 10
+    let mod = coord % 50
     case mod < 0 {
-      True -> mod + 10
+      True -> mod + 50
       False -> mod
     }
   }
 
-  // Get player's wrapped coordinates
-  let wrapped_x = wrap(x)
-  let wrapped_y = wrap(y)
-
-  // Display player's current position
-  io.println(
-    "\n=== Minimap (You are at "
-    <> int.to_string(wrapped_x)
-    <> ":"
-    <> int.to_string(wrapped_y)
-    <> ") ===",
-  )
+  // Calculate starting coordinates for a 10x10 grid centered on player
+  // 5 in each direction (including center) to make 10x10 grid
+  let start_x = wrap(x - 5)
+  let start_y = wrap(y - 5)
   io.println(
     "  (.) Empty space  (P) Planet  (S) Starport  (Y) You  (>) NPC Ship",
   )
 
-  // Fixed 10x10 grid centered on player
-  let grid_size = 10
-  let half_size = 5
-  // Half of grid size
-
-  // Calculate starting coordinates (5 rows/cols behind player)
-  let start_x = wrap(wrapped_x - half_size)
-  let start_y = wrap(wrapped_y - half_size)
-
-  // Calculate ending coordinates (4 rows/cols ahead of player, since start is inclusive)
-  let end_x = wrap(start_x + grid_size - 1)
-  let end_y = wrap(start_y + grid_size - 1)
+  // Function to get display range with wrapping for a fixed size
+  let display_range = fn(start, count: Int) -> List(Int) {
+    list.map(list.range(0, count - 1), fn(i) { wrap(start + i) })
+  }
 
   // Print top border
   io.print("   +")
-  list.each(list.repeat(item: "---", times: grid_size), fn(s) { io.print(s) })
+  list.each(list.repeat(item: "---", times: 10), fn(s) { io.print(s) })
   io.println("+")
 
-  // Print map rows
-  let display_range = fn(start, end) -> List(Int) {
-    case start <= end {
-      True -> list.range(from: start, to: end)
-      False ->
-        list.append(
-          list.range(from: start, to: 9),
-          list.range(from: 0, to: end),
-        )
+  // For each row (0-9)
+  list.each(list.range(0, 9), fn(y_offset) {
+    // Calculate actual y-coordinate for this row (with wrapping)
+    let actual_y = wrap(start_y + y_offset)
+
+    // Format y-coordinate with padding
+    let y_str = case int.to_string(actual_y) {
+      "0" -> " 0"
+      s ->
+        case string.length(s) {
+          1 -> " " <> s
+          _ -> s
+        }
     }
-  }
 
-  // Get y-coordinates to display (with wrapping)
-  let y_coords = display_range(start_y, end_y)
+    // Print y-coordinate and left border
+    io.print(" ")
+    io.print(y_str)
+    io.print("|")
 
-  // For each row
-  list.each(y_coords, fn(map_y) {
-    // Print left border
-    io.print("   |")
+    // For each column (0-9)
+    list.each(list.range(0, 9), fn(x_offset) {
+      // Calculate actual x-coordinate for this column (with wrapping)
+      let actual_x = wrap(start_x + x_offset)
 
-    // Get x-coordinates to display (with wrapping)
-    let x_coords = display_range(start_x, end_x)
-
-    // Print map cells
-    list.each(x_coords, fn(map_x) {
-      // Check if this is the player's location (using wrapped coordinates)
-      let is_player_here = map_x == wrapped_x && map_y == wrapped_y
+      // Check if this is the player's location (center of the grid)
+      let is_player_here = actual_x == x && actual_y == y
 
       // Check for homeworld (player's starting planet)
       let is_homeworld = case player.homeworld {
         option.Some(planet) ->
-          planet.position.x == map_x && planet.position.y == map_y
+          planet.position.x == actual_x && planet.position.y == actual_y
         option.None -> False
       }
 
       // Check for other planets and starports
       let has_planet =
         list.any(universe.planets, fn(planet) {
-          planet.position.x == map_x && planet.position.y == map_y
+          planet.position.x == actual_x && planet.position.y == actual_y
         })
         && !is_homeworld
 
       let has_starport =
         list.any(universe.planets, fn(planet) {
-          planet.position.x == map_x
-          && planet.position.y == map_y
+          planet.position.x == actual_x
+          && planet.position.y == actual_y
           && planet.has_starport
         })
 
@@ -128,7 +121,7 @@ pub fn show_minimap(
       let has_npc_ship =
         list.any(npc_ships, fn(npc_ship) {
           let #(nx, ny) = npc_ship.location
-          nx == map_x && ny == map_y
+          nx == actual_x && ny == actual_y
         })
 
       // Determine what to print based on what's at this location
@@ -151,20 +144,29 @@ pub fn show_minimap(
       io.print(symbol)
     })
 
-    // Print right border and row number
-    io.println(" | " <> int.to_string(map_y))
+    // Print right border
+    io.println(" |")
   })
 
-  // Print bottom border
-  io.print("   +")
-  list.each(list.repeat(item: "---", times: grid_size), fn(s) { io.print(s) })
-  io.println("+")
+  // Print x-axis numbers at the bottom
+  io.print("    ")
+  list.each(list.range(0, 9), fn(x_offset) {
+    let x = wrap(start_x + x_offset)
+    let num = int.to_string(x)
+    io.print(case string.length(num) {
+      1 -> "  " <> num
+      2 -> " " <> num
+      _ -> num
+    })
+    io.print(" ")
+  })
+  io.println("")
+
   io.println("")
 
   // Print x-axis labels
   io.print("    ")
-  let x_coords = display_range(start_x, end_x)
-  list.each(x_coords, fn(map_x) {
+  list.each(display_range(start_x, 10), fn(map_x) {
     let label = int.to_string(map_x)
     let padding = 3 - string.length(label)
     let spaces = string.repeat(" ", times: padding)

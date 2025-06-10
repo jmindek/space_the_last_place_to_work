@@ -391,7 +391,7 @@ fn show_ftl_destinations(
                       // Use the ship with updated fuel
                       dest.position.x,
                       dest.position.y,
-                      universe.size,
+                      universe.universe_width,
                     )
                   let updated_player =
                     player.Player(..player_with_less_fuel, ship: updated_ship)

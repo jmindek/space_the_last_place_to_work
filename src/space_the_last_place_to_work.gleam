@@ -47,7 +47,7 @@ pub fn main() -> Result(Nil, String) {
                   p.ship,
                   planet.position.x,
                   planet.position.y,
-                  universe.size,
+                  universe.universe_width,
                 )
               let player =
                 player.Player(

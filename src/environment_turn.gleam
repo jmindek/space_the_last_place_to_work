@@ -34,7 +34,7 @@ pub fn environment_turn(
   // Update prices on all planets
   let updated_planets = list.map(universe.planets, update_planet_prices)
   let updated_universe =
-    universe.Universe(size: universe.size, planets: updated_planets)
+    universe.Universe(size: universe.universe_width, planets: updated_planets)
 
   // Return both the player and the updated universe
   #(
