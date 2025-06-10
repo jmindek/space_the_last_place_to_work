@@ -3,10 +3,15 @@ import gleam/io
 import gleam/list
 import gleam/string
 import player
+import ship
 import universe
 
 // Display a minimap showing the player's current location and nearby points of interest
-pub fn show_minimap(player: player.Player, universe: universe.Universe) {
+pub fn show_minimap(
+  player: player.Player,
+  universe: universe.Universe,
+  npc_ships: List(ship.Ship),
+) {
   let #(x, y) = player.ship.location
   let map_size = 10
   // 10x10 grid around the player
@@ -18,7 +23,9 @@ pub fn show_minimap(player: player.Player, universe: universe.Universe) {
     <> int.to_string(y)
     <> ") ===",
   )
-  io.println("  (.) Empty space  (P) Planet  (S) Starport  (Y) You")
+  io.println(
+    "  (.) Empty space  (P) Planet  (S) Starport  (Y) You  (>) NPC Ship",
+  )
 
   // Calculate map bounds (ensure we have at least 1x1 map)
   let map_size_int = int.max(1, int.min(10, map_size))
@@ -46,13 +53,12 @@ pub fn show_minimap(player: player.Player, universe: universe.Universe) {
       case map_x == x && map_y == y {
         True -> io.print(" Y ")
         False -> {
-          // Check for planets at this location
+          // Check for planets and starports at this location
           let has_planet =
             list.any(universe.planets, fn(planet) {
               planet.position.x == map_x && planet.position.y == map_y
             })
 
-          // Check for starports at this location
           let has_starport =
             list.any(universe.planets, fn(planet) {
               planet.position.x == map_x
@@ -60,11 +66,19 @@ pub fn show_minimap(player: player.Player, universe: universe.Universe) {
               && planet.has_starport
             })
 
+          // Check for NPC ships at this location
+          let has_npc_ship =
+            list.any(npc_ships, fn(npc_ship) {
+              let #(nx, ny) = npc_ship.location
+              nx == map_x && ny == map_y
+            })
+
           // Determine what to print based on what's at this location
-          let symbol = case has_starport, has_planet {
-            True, _ -> " S "
-            False, True -> " P "
-            False, False -> " . "
+          let symbol = case has_starport, has_planet, has_npc_ship {
+            True, _, _ -> " S "
+            False, True, _ -> " P "
+            False, False, True -> " > "
+            False, False, False -> " . "
           }
 
           io.print(symbol)

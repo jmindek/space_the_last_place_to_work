@@ -247,10 +247,20 @@ pub fn player_turn(
 
         // Show location map
         "L" -> {
-          coordinate_map.show_minimap(player, universe)
-          io.println("\nPress Enter to continue...")
-          let _ = utils.get_line("")
-          game_types.Continue(player, universe, npc_ships)
+          case npc_ships {
+            option.Some(ships) -> {
+              coordinate_map.show_minimap(player, universe, ships)
+              io.println("\nPress Enter to continue...")
+              let _ = utils.get_line("")
+              game_types.Continue(player, universe, npc_ships)
+            }
+            option.None -> {
+              coordinate_map.show_minimap(player, universe, [])
+              io.println("\nPress Enter to continue...")
+              let _ = utils.get_line("")
+              game_types.Continue(player, universe, npc_ships)
+            }
+          }
         }
 
         // Trade at starport
@@ -263,7 +273,13 @@ pub fn player_turn(
         "Q" -> game_types.Quit
 
         // Movement command section
-        "M" -> handle_movement_menu(player, universe, current_planet_result)
+        "M" ->
+          handle_movement_menu(
+            player,
+            universe,
+            current_planet_result,
+            npc_ships,
+          )
 
         // Show system information
         "S" -> show_system_information(player, universe, current_planet_result)
@@ -443,9 +459,13 @@ fn handle_movement_menu(
   player: player.Player,
   universe: universe.Universe,
   current_planet_result: Result(universe.Planet, Nil),
+  npc_ships: Option(List(ship.Ship)),
 ) -> game_types.GameState {
   // Show minimap
-  coordinate_map.show_minimap(player, universe)
+  case npc_ships {
+    option.Some(ships) -> coordinate_map.show_minimap(player, universe, ships)
+    option.None -> coordinate_map.show_minimap(player, universe, [])
+  }
 
   // Show menu options
   io.println("\n  (C)oordinates - Enter specific coordinates to move to")
