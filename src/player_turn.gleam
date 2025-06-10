@@ -249,13 +249,13 @@ pub fn player_turn(
         "L" -> {
           case npc_ships {
             option.Some(ships) -> {
-              coordinate_map.show_minimap(player, universe, ships)
+              coordinate_map.show_minimap(player, universe, ships, False)
               io.println("\nPress Enter to continue...")
               let _ = utils.get_line("")
               game_types.Continue(player, universe, npc_ships)
             }
             option.None -> {
-              coordinate_map.show_minimap(player, universe, [])
+              coordinate_map.show_minimap(player, universe, [], False)
               io.println("\nPress Enter to continue...")
               let _ = utils.get_line("")
               game_types.Continue(player, universe, npc_ships)
@@ -461,10 +461,11 @@ fn handle_movement_menu(
   current_planet_result: Result(universe.Planet, Nil),
   npc_ships: Option(List(ship.Ship)),
 ) -> game_types.GameState {
-  // Show minimap
+  // Show minimap with NPC info
   case npc_ships {
-    option.Some(ships) -> coordinate_map.show_minimap(player, universe, ships)
-    option.None -> coordinate_map.show_minimap(player, universe, [])
+    option.Some(ships) ->
+      coordinate_map.show_minimap(player, universe, ships, True)
+    option.None -> coordinate_map.show_minimap(player, universe, [], True)
   }
 
   // Show menu options
@@ -483,7 +484,7 @@ fn handle_movement_menu(
   // Handle menu selection
   case string.uppercase(input) {
     // Coordinates input
-    "C" -> handle_coordinates_input(player, universe)
+    "C" -> handle_coordinates_input(player, universe, npc_ships)
 
     // FTL travel
     "F" -> handle_ftl_travel(player, universe, current_planet_result)
@@ -518,6 +519,7 @@ fn handle_movement_menu(
 fn handle_coordinates_input(
   player: player.Player,
   universe: universe.Universe,
+  npc_ships: Option(List(ship.Ship)),
 ) -> game_types.GameState {
   io.println("\nEnter target coordinates (X:Y):")
   io.print("> ")
@@ -536,8 +538,28 @@ fn handle_coordinates_input(
           case y_parsed {
             Ok(y) -> {
               let #(current_x, current_y) = player.ship.location
-              let dx = int.absolute_value(x - current_x)
-              let dy = int.absolute_value(y - current_y)
+
+              // Calculate wrapped distances (accounting for 10x10 universe)
+              let wrap_distance = fn(a: Int, b: Int) -> Int {
+                let universe_size = 10
+                // Ensure coordinates are positive and within universe bounds
+                let wrap_coord = fn(coord: Int) -> Int {
+                  let mod = coord % universe_size
+                  case mod < 0 {
+                    True -> mod + universe_size
+                    False -> mod
+                  }
+                }
+
+                let a_wrapped = wrap_coord(a)
+                let b_wrapped = wrap_coord(b)
+                let diff = int.absolute_value(a_wrapped - b_wrapped)
+                // The minimum of direct distance and wrapped distance
+                int.min(diff, universe_size - diff)
+              }
+
+              let dx = wrap_distance(x, current_x)
+              let dy = wrap_distance(y, current_y)
               // Using Manhattan distance (sum of x and y differences)
               let distance = dx + dy
 
@@ -551,7 +573,7 @@ fn handle_coordinates_input(
                         <> ":"
                         <> int.to_string(y),
                       )
-                      game_types.Continue(updated_player, universe, None)
+                      game_types.Continue(updated_player, universe, npc_ships)
                     }
                     Error(e) -> {
                       io.println("\nError: " <> e)

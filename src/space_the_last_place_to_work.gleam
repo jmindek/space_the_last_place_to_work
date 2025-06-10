@@ -59,7 +59,11 @@ pub fn main() -> Result(Nil, String) {
                 )
 
               let npc_ships =
-                npc.generate_npc_ships(5, universe.size, universe.size)
+                npc.generate_npc_ships(
+                  2,
+                  universe.universe_width,
+                  universe.universe_height,
+                )
 
               // Start the game loop
               game_loop(universe, player, npc_ships)
@@ -102,27 +106,27 @@ fn turn(
   player: player.Player,
   npc_ships: List(ship.Ship),
 ) -> game_types.GameState {
-  // First, process player turn
+  // Process player turn with current NPC ships
   case player_turn.player_turn(universe, player, option.Some(npc_ships)) {
     game_types.Continue(
       updated_player,
       updated_universe,
-      maybe_updated_npc_ships,
+      _,
+      // We'll ignore the NPC ships from player_turn since we'll use our own
     ) -> {
-      // Then process NPC turn with the updated NPC ships
-      let moved_npc_ships = case maybe_updated_npc_ships {
-        option.Some(updated_npc_ships) -> {
-          let moved = npc_turn.npc_turn(updated_universe, updated_npc_ships)
-          option.Some(moved)
-        }
-        option.None -> option.None
-      }
+      // Process NPC turn with the current NPC ships
+      let moved_npc_ships = npc_turn.npc_turn(updated_universe, npc_ships)
 
-      // Finally, process environment turn
+      // Process environment turn
       let #(next_player, final_universe) =
         environment_turn.environment_turn(updated_universe, updated_player)
 
-      game_types.Continue(next_player, final_universe, moved_npc_ships)
+      // Always pass along the moved NPC ships
+      game_types.Continue(
+        next_player,
+        final_universe,
+        option.Some(moved_npc_ships),
+      )
     }
     game_types.Quit -> game_types.Quit
   }

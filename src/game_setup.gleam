@@ -15,7 +15,10 @@ pub fn setup() -> Result(game_types.GameState, String) {
     _ ->
       // Create a default homeworld if no planets exist
       universe.Planet(
-        position: universe.Position(x: 50, y: 50),
+        position: universe.Position(
+          x: universe.universe_width / 2,
+          y: universe.universe_height / 2,
+        ),
         life_supporting: True,
         population: 1000,
         water_percentage: 80,
@@ -33,10 +36,22 @@ pub fn setup() -> Result(game_types.GameState, String) {
   }
 
   // Create player's ship
+  // Ensure homeworld position is wrapped within universe bounds
+  let wrap_coord = fn(coord: Int, size: Int) -> Int {
+    let mod = coord % size
+    case mod < 0 {
+      True -> mod + size
+      False -> mod
+    }
+  }
+
+  let home_x = wrap_coord(homeworld.position.x, universe.universe_width)
+  let home_y = wrap_coord(homeworld.position.y, universe.universe_height)
+
   let player_ship =
     ship.Ship(
-      location: #(homeworld.position.x, homeworld.position.y),
-      previous_location: #(homeworld.position.x, homeworld.position.y),
+      location: #(home_x, home_y),
+      previous_location: #(home_x, home_y),
       // Initialize with same as current location
       speed: 0,
       max_speed: 10,
